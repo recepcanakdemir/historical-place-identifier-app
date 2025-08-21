@@ -1,4 +1,4 @@
-// app/settings.tsx - Completely Fixed Version
+// app/settings.tsx - Completely Fixed TypeScript Version
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -21,21 +21,24 @@ import {
   getDeviceLanguage,
   getUITexts,
 } from '../services/languageService';
-
-interface Language {
-  code: string;
-  name: string;
-  flag: string;
-}
+import { getUsageStats, resetUsage } from '../services/usageService';
+import { checkSubscriptionStatus, restorePurchases } from '../services/subscriptionService';
+// IMPORT EKLENDİ:
+import { UsageStats, SubscriptionStatus, Language } from '../types';
 
 export default function SettingsScreen() {
-  const [currentLang, setCurrentLang] = useState('en');
-  const [deviceLang, setDeviceLang] = useState('en');
-  const [modalVisible, setModalVisible] = useState(false);
+  const [currentLang, setCurrentLang] = useState<string>('en');
+  const [deviceLang, setDeviceLang] = useState<string>('en');
+  const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [uiTexts, setUITexts] = useState(getUITexts('en'));
+  
+  // Premium states with proper types
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   // Manual backup if import fails
-  const MANUAL_LANGUAGES = [
+  const MANUAL_LANGUAGES: Language[] = [
     { code: 'tr', name: 'Türkçe', flag: '🇹🇷' },
     { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Español', flag: '🇪🇸' },
@@ -43,53 +46,55 @@ export default function SettingsScreen() {
     { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
   ];
 
-  // Use imported or manual
-  const languagesToUse = SUPPORTED_LANGUAGES?.length > 0 ? SUPPORTED_LANGUAGES : MANUAL_LANGUAGES;
+  // Use imported or manual with proper typing
+  const languagesToUse: Language[] = SUPPORTED_LANGUAGES?.length > 0 ? SUPPORTED_LANGUAGES : MANUAL_LANGUAGES;
 
   useEffect(() => {
-    loadLanguageSettings();
+    loadSettings();
   }, []);
 
-  const loadLanguageSettings = async () => {
+  const loadSettings = async (): Promise<void> => {
     try {
+      setLoading(true);
+      
+      // Load language settings
       const current = await getCurrentLanguage();
       const device = getDeviceLanguage();
       
-      console.log('Loaded language settings:', { current, device });
       setCurrentLang(current);
       setDeviceLang(device);
       setUITexts(getUITexts(current));
+      
+      // Load usage stats with type checking
+      const stats = await getUsageStats();
+      if (stats && typeof stats === 'object') {
+        setUsageStats(stats as UsageStats);
+      }
+      
+      // Load subscription status with type checking
+      const subStatus = await checkSubscriptionStatus();
+      if (subStatus && typeof subStatus === 'object') {
+        setSubscriptionStatus(subStatus as SubscriptionStatus);
+      }
+      
+      console.log('Settings loaded:', { current, device, stats, subStatus });
     } catch (error) {
-      console.error('Error loading language settings:', error);
+      console.error('Error loading settings:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const openLanguageModal = () => {
-    console.log('=== Opening Language Modal ===');
-    console.log('SUPPORTED_LANGUAGES import:', SUPPORTED_LANGUAGES);
-    console.log('SUPPORTED_LANGUAGES type:', typeof SUPPORTED_LANGUAGES);
-    console.log('SUPPORTED_LANGUAGES length:', SUPPORTED_LANGUAGES?.length);
-    
-    // Manual test data
-    const testLanguages = [
-      { code: 'tr', name: 'Türkçe', flag: '🇹🇷' },
-      { code: 'en', name: 'English', flag: '🇺🇸' },
-      { code: 'es', name: 'Español', flag: '🇪🇸' },
-    ];
-    console.log('Test languages:', testLanguages);
-    
+  const openLanguageModal = (): void => {
     setModalVisible(true);
-    console.log('Modal opened, new modalVisible should be true');
   };
 
-  const closeLanguageModal = () => {
-    console.log('=== Closing Language Modal ===');
+  const closeLanguageModal = (): void => {
     setModalVisible(false);
   };
 
-  const handleLanguageChange = async (languageCode: string) => {
+  const handleLanguageChange = async (languageCode: string): Promise<void> => {
     try {
-      console.log('Changing language to:', languageCode);
       await changeLanguage(languageCode);
       setCurrentLang(languageCode);
       setUITexts(getUITexts(languageCode));
@@ -105,7 +110,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleResetToDevice = async () => {
+  const handleResetToDevice = async (): Promise<void> => {
     try {
       const deviceLanguage = await resetToDeviceLanguage();
       setCurrentLang(deviceLanguage);
@@ -121,42 +126,84 @@ export default function SettingsScreen() {
     }
   };
 
-  const getCurrentLanguageInfo = () => {
-    return SUPPORTED_LANGUAGES.find(lang => lang.code === currentLang) || SUPPORTED_LANGUAGES[1];
+  const handleUpgradeToPremium = (): void => {
+    router.push('/premium');
   };
 
-  const getDeviceLanguageInfo = () => {
-    return SUPPORTED_LANGUAGES.find(lang => lang.code === deviceLang) || SUPPORTED_LANGUAGES[1];
+  const handleRestorePurchases = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      const result = await restorePurchases();
+      
+      if (result.success) {
+        Alert.alert('Success', result.message);
+        // Refresh subscription status with type checking
+        const newStatus = await checkSubscriptionStatus();
+        if (newStatus && typeof newStatus === 'object') {
+          setSubscriptionStatus(newStatus as SubscriptionStatus);
+        }
+      } else {
+        Alert.alert('Error', result.message);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to restore purchases');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const renderLanguageItem: ListRenderItem<Language> = ({ item, index }) => {
-    console.log(`Rendering item ${index}:`, item);
-    return (
-      <TouchableOpacity
-        style={[
-          styles.languageItem,
-          item.code === currentLang && styles.selectedLanguageItem
-        ]}
-        onPress={() => {
-          console.log('Language selected:', item.code);
-          handleLanguageChange(item.code);
-        }}
-      >
-        <Text style={styles.languageFlag}>{item.flag}</Text>
-        <Text style={[
-          styles.languageName,
-          item.code === currentLang && styles.selectedLanguageName
-        ]}>
-          {item.name}
-        </Text>
-        {item.code === currentLang && (
-          <Text style={styles.checkmark}>✓</Text>
-        )}
-      </TouchableOpacity>
+  const handleResetUsage = (): void => {
+    Alert.alert(
+      'Reset Usage Data',
+      'This will reset your usage statistics. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await resetUsage();
+            await loadSettings();
+            Alert.alert('Success', 'Usage data has been reset');
+          }
+        }
+      ]
     );
   };
 
-  console.log('Settings render - modalVisible:', modalVisible);
+  const getCurrentLanguageInfo = (): Language => {
+    return languagesToUse.find(lang => lang.code === currentLang) || languagesToUse[0];
+  };
+
+  const getDeviceLanguageInfo = (): Language => {
+    return languagesToUse.find(lang => lang.code === deviceLang) || languagesToUse[0];
+  };
+
+  const renderLanguageItem: ListRenderItem<Language> = ({ item }) => (
+    <TouchableOpacity
+      style={[
+        styles.languageItem,
+        item.code === currentLang && styles.selectedLanguageItem
+      ]}
+      onPress={() => handleLanguageChange(item.code)}
+    >
+      <Text style={styles.languageFlag}>{item.flag}</Text>
+      <Text style={[
+        styles.languageName,
+        item.code === currentLang && styles.selectedLanguageName
+      ]}>
+        {item.name}
+      </Text>
+      {item.code === currentLang && (
+        <Text style={styles.checkmark}>✓</Text>
+      )}
+    </TouchableOpacity>
+  );
+
+  const formatDate = (dateString?: string | null): string => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -165,10 +212,68 @@ export default function SettingsScreen() {
           <Text style={styles.title}>{uiTexts.settings}</Text>
         </View>
 
+        {/* Premium Status Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Premium Status</Text>
+          
+          <View style={styles.premiumCard}>
+            <View style={styles.premiumHeader}>
+              <Text style={styles.premiumTitle}>
+                {subscriptionStatus?.isPremium ? '✨ Premium Active' : '📸 Free Plan'}
+              </Text>
+              <Text style={styles.premiumStatus}>
+                {subscriptionStatus?.isPremium ? 'Unlimited Access' : `${usageStats?.remainingFreeAnalyses || 0} analyses left`}
+              </Text>
+            </View>
+            
+            {subscriptionStatus?.isPremium ? (
+              <View style={styles.premiumDetails}>
+                <Text style={styles.premiumDetailText}>
+                  Expires: {formatDate(subscriptionStatus?.expirationDate)}
+                </Text>
+                <Text style={styles.premiumDetailText}>
+                  Member since: {formatDate(subscriptionStatus?.originalPurchaseDate)}
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.upgradeButton}
+                onPress={handleUpgradeToPremium}
+              >
+                <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* Usage Statistics */}
+        {usageStats && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Usage Statistics</Text>
+            
+            <View style={styles.statsGrid}>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>{usageStats.totalAnalyses}</Text>
+                <Text style={styles.statLabel}>Total Analyses</Text>
+              </View>
+              <View style={styles.statCard}>
+                <Text style={styles.statNumber}>
+                  {usageStats.isPremium ? '∞' : usageStats.remainingFreeAnalyses}
+                </Text>
+                <Text style={styles.statLabel}>Remaining</Text>
+              </View>
+            </View>
+            
+            <Text style={styles.memberSince}>
+              Member since: {formatDate(usageStats.memberSince)}
+            </Text>
+          </View>
+        )}
+
+        {/* Language Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{uiTexts.language}</Text>
           
-          {/* Current Language */}
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingLabel}>{uiTexts.currentLanguage}</Text>
@@ -178,7 +283,6 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          {/* Change Language Button */}
           <TouchableOpacity
             style={styles.settingButton}
             onPress={openLanguageModal}
@@ -187,7 +291,6 @@ export default function SettingsScreen() {
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
-          {/* Reset to Device Language */}
           <TouchableOpacity
             style={styles.settingButton}
             onPress={handleResetToDevice}
@@ -199,6 +302,30 @@ export default function SettingsScreen() {
               </Text>
             </View>
             <Text style={styles.arrow}>↻</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Account Actions */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={handleRestorePurchases}
+            disabled={loading}
+          >
+            <Text style={styles.settingButtonText}>
+              {loading ? 'Restoring...' : 'Restore Purchases'}
+            </Text>
+            <Text style={styles.arrow}>↻</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={handleResetUsage}
+          >
+            <Text style={[styles.settingButtonText, styles.dangerText]}>Reset Usage Data</Text>
+            <Text style={styles.arrow}>⚠️</Text>
           </TouchableOpacity>
         </View>
 
@@ -237,14 +364,13 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
             
-            
             <FlatList
               data={languagesToUse}
               renderItem={renderLanguageItem}
               keyExtractor={(item, index) => `lang-${item.code}-${index}`}
               style={styles.languageList}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ flexGrow: 1 }} // Ensure content fills
+              contentContainerStyle={{ flexGrow: 1 }}
             />
           </View>
         </View>
@@ -284,6 +410,85 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 15,
   },
+  
+  // Premium Status Styles
+  premiumCard: {
+    marginHorizontal: 20,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  premiumHeader: {
+    marginBottom: 12,
+  },
+  premiumTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  premiumStatus: {
+    fontSize: 14,
+    color: '#666',
+  },
+  premiumDetails: {
+    marginTop: 8,
+  },
+  premiumDetailText: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 4,
+  },
+  upgradeButton: {
+    backgroundColor: '#4A90E2',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  upgradeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  
+  // Statistics Styles
+  statsGrid: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    gap: 15,
+    marginBottom: 15,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#4A90E2',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  memberSince: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  
+  // Settings Item Styles
   settingItem: {
     paddingHorizontal: 20,
     paddingVertical: 15,
@@ -315,6 +520,9 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '500',
   },
+  dangerText: {
+    color: '#e74c3c',
+  },
   deviceLanguageText: {
     fontSize: 14,
     color: '#666',
@@ -339,6 +547,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -358,13 +568,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     width: '100%',
     maxWidth: 400,
-    height: '70%', // Fixed height instead of maxHeight
+    height: '70%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
-    overflow: 'hidden', // Important for content clipping
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -373,7 +583,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
-    backgroundColor: '#f8f9fa', // Slight background to see it
+    backgroundColor: '#f8f9fa',
   },
   modalTitle: {
     fontSize: 18,
@@ -385,7 +595,7 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0', // Background to see it
+    backgroundColor: '#f0f0f0',
     borderRadius: 15,
   },
   closeButtonText: {
@@ -393,8 +603,8 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   languageList: {
-    flex: 1, // Take remaining space
-    backgroundColor: 'white', // Ensure white background
+    flex: 1,
+    backgroundColor: 'white',
   },
   languageItem: {
     flexDirection: 'row',
@@ -403,8 +613,8 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
-    backgroundColor: 'white', // Explicit white background
-    minHeight: 60, // Minimum height to ensure visibility
+    backgroundColor: 'white',
+    minHeight: 60,
   },
   selectedLanguageItem: {
     backgroundColor: '#f0f8ff',
@@ -426,19 +636,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#4A90E2',
     fontWeight: 'bold',
-  },
-  emptyList: {
-    padding: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  debugContainer: {
-    padding: 10,
-    backgroundColor: '#ffffcc',
-    margin: 10,
-  },
-  debugText: {
-    fontSize: 12,
-    color: '#333',
   },
 });

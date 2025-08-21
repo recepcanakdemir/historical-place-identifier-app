@@ -1,4 +1,4 @@
-// app/result.tsx - Complete with Save Feature
+// app/result.tsx - Updated with Usage Limits
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,10 +11,13 @@ import {
   SafeAreaView,
   Alert,
   Share,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { analyzeHistoricalPlace } from '../services/visionService';
 import { saveHistoricalPlace } from '../services/storageService';
+import { canPerformAnalysis, useAnalysis, getUsageStats } from '../services/usageService';
+import { PlaceInfo, UsageStats } from '../types';
 
 interface PlaceInfo {
   name: string;
@@ -41,37 +44,72 @@ export default function ResultScreen() {
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userLocation, setUserLocation] = useState<string>('');
+  
+  // Usage tracking states
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
 
   useEffect(() => {
     if (fromSaved === 'true' && savedData) {
-      // Load from saved data
-      try {
-        const parsed = JSON.parse(savedData);
-        setPlaceInfo(parsed);
-        setIsSaved(true);
-        setUserLocation(parsed.userLocation || '');
-        setLoading(false);
-      } catch (error) {
-        console.error('Error parsing saved data:', error);
-        setError('Failed to load saved data');
-        setLoading(false);
-      }
+      // Load from saved data - no limit check needed
+      loadSavedData();
     } else if (imageUri) {
-      // Analyze new image
-      analyzePlaceFromImage();
+      // New analysis - check limits first
+      checkLimitsAndAnalyze();
     }
   }, [imageUri, savedData, fromSaved]);
 
-  const analyzePlaceFromImage = async () => {
+  const loadSavedData = () => {
+    try {
+      const parsed = JSON.parse(savedData);
+      setPlaceInfo(parsed);
+      setIsSaved(true);
+      setUserLocation(parsed.userLocation || '');
+      setLoading(false);
+    } catch (error) {
+      console.error('Error parsing saved data:', error);
+      setError('Failed to load saved data');
+      setLoading(false);
+    }
+  };
+
+  const checkLimitsAndAnalyze = async () => {
     try {
       setLoading(true);
       
+      // Check if user can perform analysis
+      const canAnalyze = await canPerformAnalysis();
+      
+      if (!canAnalyze.canAnalyze) {
+        // User has reached limit - show upgrade modal
+        const stats = await getUsageStats();
+        setUsageStats(stats);
+        setShowLimitModal(true);
+        setLoading(false);
+        return;
+      }
+      
+      // User can analyze - proceed
+      await performAnalysis();
+      
+      // After successful analysis, use one analysis credit
+      const result = await useAnalysis();
+      console.log('Analysis used, remaining:', result.remainingAnalyses);
+      
+    } catch (error) {
+      console.error('Error in limit check:', error);
+      setError('Failed to check usage limits');
+      setLoading(false);
+    }
+  };
+
+  const performAnalysis = async () => {
+    try {
       // Parse location data if available AND not from gallery
       let parsedLocationData = null;
       if (locationData && fromGallery !== 'true') {
         try {
           parsedLocationData = JSON.parse(locationData);
-          // Simple format for display
           const locationStr = parsedLocationData.address?.city || 
                             parsedLocationData.address?.region || 
                             'Location detected';
@@ -81,7 +119,6 @@ export default function ResultScreen() {
         }
       }
       
-      // Galeriden gelen fotoğraflar için konum bilgisi gönderilmez
       const result = await analyzeHistoricalPlace(imageUri, parsedLocationData);
       setPlaceInfo(result);
     } catch (err) {
@@ -140,9 +177,58 @@ export default function ResultScreen() {
     }
   };
 
-  const tryAgain = () => {
+  const handleUpgradeToPremium = () => {
+    setShowLimitModal(false);
+    // Navigate to premium screen (we'll create this next)
+    router.push('/premium');
+  };
+
+  const handleTryAgain = () => {
     router.back();
   };
+
+  // Limit Modal Component
+  const LimitReachedModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={showLimitModal}
+      onRequestClose={() => setShowLimitModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.limitModalContent}>
+          <Text style={styles.limitModalIcon}>📸</Text>
+          <Text style={styles.limitModalTitle}>Analysis Limit Reached</Text>
+          <Text style={styles.limitModalSubtitle}>
+            You've used all {usageStats?.totalAnalyses || 3} free analyses!
+          </Text>
+          
+          <View style={styles.limitModalFeatures}>
+            <Text style={styles.featureTitle}>Upgrade to Premium for:</Text>
+            <Text style={styles.featureItem}>✨ Unlimited analyses</Text>
+            <Text style={styles.featureItem}>🚀 Priority AI processing</Text>
+            <Text style={styles.featureItem}>💾 Advanced saving features</Text>
+          </View>
+          
+          <View style={styles.limitModalButtons}>
+            <TouchableOpacity 
+              style={styles.upgradeButton}
+              onPress={handleUpgradeToPremium}
+            >
+              <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={handleTryAgain}
+            >
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   if (!imageUri) {
     return (
@@ -157,14 +243,14 @@ export default function ResultScreen() {
       <ScrollView style={styles.scrollView}>
         <Image source={{ uri: imageUri }} style={styles.image} />
         
-        {/* Konum banner'ı sadece kameradan çekilen fotoğraflar için göster */}
+        {/* Location banner - only for camera photos */}
         {userLocation && fromGallery !== 'true' && (
           <View style={styles.locationBanner}>
             <Text style={styles.locationBannerText}>📍 {userLocation}</Text>
           </View>
         )}
         
-        {/* Galeri fotoğrafları için bilgi banner'ı */}
+        {/* Gallery banner */}
         {fromGallery === 'true' && (
           <View style={styles.galleryBanner}>
             <Text style={styles.galleryBannerText}>🖼️ Analyzed from gallery image</Text>
@@ -183,7 +269,7 @@ export default function ResultScreen() {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={tryAgain}>
+            <TouchableOpacity style={styles.retryButton} onPress={handleTryAgain}>
               <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
@@ -204,7 +290,7 @@ export default function ResultScreen() {
               
               {placeInfo.yearBuilt && (
                 <View style={styles.detailCard}>
-                  <Text style={styles.detailLabel}>🏗️ Built</Text>
+                  <Text style={styles.detailLabel}>🗓️ Built</Text>
                   <Text style={styles.detailValue}>{placeInfo.yearBuilt}</Text>
                 </View>
               )}
@@ -277,6 +363,9 @@ export default function ResultScreen() {
           </View>
         )}
       </ScrollView>
+      
+      {/* Limit Reached Modal */}
+      <LimitReachedModal />
     </SafeAreaView>
   );
 }
@@ -483,5 +572,82 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  limitModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 350,
+  },
+  limitModalIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+  },
+  limitModalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  limitModalSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  limitModalFeatures: {
+    width: '100%',
+    marginBottom: 30,
+  },
+  featureTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  featureItem: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  limitModalButtons: {
+    width: '100%',
+    gap: 10,
+  },
+  upgradeButton: {
+    backgroundColor: '#4A90E2',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  upgradeButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  backButton: {
+    backgroundColor: '#f0f0f0',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
   },
 });

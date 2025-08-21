@@ -1,4 +1,4 @@
-// app/index.tsx - Fixed Animation Version
+// app/index.tsx - Fixed TypeScript Errors
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -18,40 +18,55 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { getCurrentLanguage, getUITexts } from '../services/languageService';
+import { getUsageStats } from '../services/usageService';
+import { checkSubscriptionStatus } from '../services/subscriptionService';
+import { UsageStats, SubscriptionStatus } from '../types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [currentLang, setCurrentLang] = useState('en');
+  const [menuVisible, setMenuVisible] = useState<boolean>(false);
+  const [currentLang, setCurrentLang] = useState<string>('en');
   const [uiTexts, setUITexts] = useState(getUITexts('en'));
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const slideAnim = useRef(new Animated.Value(-280)).current;
   const insets = useSafeAreaInsets();
 
-  // Load language when screen focuses
+  // Load data when screen focuses
   useFocusEffect(
     React.useCallback(() => {
-      loadLanguage();
+      loadAppData();
     }, [])
   );
 
-  const loadLanguage = async () => {
+  const loadAppData = async (): Promise<void> => {
     try {
+      // Load language
       const language = await getCurrentLanguage();
       setCurrentLang(language);
       setUITexts(getUITexts(language));
-      console.log('Home screen language loaded:', language);
+      
+      // Load usage stats
+      const stats = await getUsageStats();
+      setUsageStats(stats);
+      
+      // Load subscription status
+      const subStatus = await checkSubscriptionStatus();
+      setSubscriptionStatus(subStatus);
+      
+      console.log('Home screen data loaded:', { language, stats, subStatus });
     } catch (error) {
-      console.error('Error loading language:', error);
+      console.error('Error loading app data:', error);
     }
   };
 
-  const takePhoto = () => {
+  const takePhoto = (): void => {
     closeMenu();
     setTimeout(() => router.push('/camera'), 100);
   };
 
-  const pickImage = async () => {
+  const pickImage = async (): Promise<void> => {
     closeMenu();
     setTimeout(async () => {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -73,7 +88,7 @@ export default function HomeScreen() {
     }, 100);
   };
 
-  const openMenu = () => {
+  const openMenu = (): void => {
     setMenuVisible(true);
     Animated.timing(slideAnim, {
       toValue: 0,
@@ -82,7 +97,7 @@ export default function HomeScreen() {
     }).start();
   };
 
-  const closeMenu = () => {
+  const closeMenu = (): void => {
     Animated.timing(slideAnim, {
       toValue: -280,
       duration: 250,
@@ -92,14 +107,93 @@ export default function HomeScreen() {
     });
   };
 
-  const navigateToSaved = () => {
+  const navigateToSaved = (): void => {
     closeMenu();
     setTimeout(() => router.push('/saved'), 200);
   };
 
-  const navigateToSettings = () => {
+  const navigateToSettings = (): void => {
     closeMenu();
     setTimeout(() => router.push('/settings'), 200);
+  };
+
+  const navigateToPremium = (): void => {
+    closeMenu();
+    setTimeout(() => router.push('/premium'), 200);
+  };
+
+  const renderPremiumBanner = (): JSX.Element | null => {
+    // Check both subscription status and usage stats for premium
+    if (subscriptionStatus?.isPremium || usageStats?.isPremium) {
+      return (
+        <View style={styles.premiumActiveBanner}>
+          <Text style={styles.premiumActiveText}>✨ Premium Active</Text>
+          <Text style={styles.premiumActiveSubtext}>Unlimited analyses</Text>
+        </View>
+      );
+    }
+
+    const remaining = Math.max(0, usageStats?.remainingFreeAnalyses || 0);
+
+    if (remaining === 0) {
+      return (
+        <TouchableOpacity 
+          style={styles.upgradeBanner}
+          onPress={navigateToPremium}
+        >
+          <Text style={styles.upgradeBannerText}>📸 No free analyses left</Text>
+          <Text style={styles.upgradeBannerSubtext}>Tap to upgrade to Premium</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (remaining === 1) {
+      return (
+        <View style={styles.warningBanner}>
+          <Text style={styles.warningBannerText}>⚡ 1 free analysis left</Text>
+          <TouchableOpacity 
+            style={styles.miniUpgradeButton}
+            onPress={navigateToPremium}
+          >
+            <Text style={styles.miniUpgradeText}>Upgrade</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  const renderUsageIndicator = (): JSX.Element => {
+    // First check subscription status, then usage stats
+    if (subscriptionStatus?.isPremium || usageStats?.isPremium) {
+      return (
+        <View style={styles.usageIndicator}>
+          <Text style={styles.usageText}>∞ Unlimited Access</Text>
+        </View>
+      );
+    }
+
+    const remaining = Math.max(0, usageStats?.remainingFreeAnalyses || 0); // Ensure non-negative
+    const total = 3;
+    const used = Math.max(0, total - remaining); // Ensure non-negative
+
+    return (
+      <View style={styles.usageIndicator}>
+        <Text style={styles.usageText}>{remaining} of {total} free analyses left</Text>
+        <View style={styles.progressBar}>
+          {[...Array(total)].map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.progressDot,
+                index < used ? styles.progressDotUsed : styles.progressDotRemaining
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -115,6 +209,9 @@ export default function HomeScreen() {
         <View style={styles.headerPlaceholder} />
       </View>
 
+      {/* Premium/Usage Banner */}
+      {renderPremiumBanner()}
+
       {/* Main Content */}
       <View style={styles.content}>
         <View style={styles.logoContainer}>
@@ -127,6 +224,9 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>
           {uiTexts.subtitle || 'Explore monuments and landmarks with AI-powered historical insights'}
         </Text>
+
+        {/* Usage Indicator */}
+        {renderUsageIndicator()}
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.primaryButton} onPress={takePhoto}>
@@ -187,7 +287,7 @@ export default function HomeScreen() {
                 styles.menuContainer,
                 { 
                   transform: [{ translateX: slideAnim }],
-                  paddingTop: insets.top, // iPhone çentik için
+                  paddingTop: insets.top,
                 }
               ]}
             >
@@ -199,6 +299,20 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.menuItems}>
+                {/* Premium Status in Menu */}
+                <View style={styles.menuPremiumStatus}>
+                  {subscriptionStatus?.isPremium ? (
+                    <Text style={styles.menuPremiumActiveText}>✨ Premium Member</Text>
+                  ) : (
+                    <TouchableOpacity 
+                      style={styles.menuUpgradeButton}
+                      onPress={navigateToPremium}
+                    >
+                      <Text style={styles.menuUpgradeText}>⭐ Upgrade to Premium</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
                 <TouchableOpacity style={styles.menuItem} onPress={navigateToSaved}>
                   <Text style={styles.menuIcon}>💾</Text>
                   <Text style={styles.menuItemText}>Saved Places</Text>
@@ -211,11 +325,24 @@ export default function HomeScreen() {
                   <Text style={styles.menuArrow}>›</Text>
                 </TouchableOpacity>
 
+                {!subscriptionStatus?.isPremium && (
+                  <TouchableOpacity style={styles.menuItem} onPress={navigateToPremium}>
+                    <Text style={styles.menuIcon}>⭐</Text>
+                    <Text style={styles.menuItemText}>Premium</Text>
+                    <Text style={styles.menuArrow}>›</Text>
+                  </TouchableOpacity>
+                )}
+
                 <View style={styles.menuDivider} />
 
                 <View style={styles.menuFooter}>
                   <Text style={styles.menuFooterText}>Historical Place Finder</Text>
                   <Text style={styles.menuFooterSubtext}>v1.0.0</Text>
+                  {usageStats && (
+                    <Text style={styles.menuFooterUsage}>
+                      {usageStats.totalAnalyses} total analyses
+                    </Text>
+                  )}
                 </View>
               </View>
             </Animated.View>
@@ -264,6 +391,62 @@ const styles = StyleSheet.create({
   headerPlaceholder: {
     width: 30,
   },
+  premiumActiveBanner: {
+    backgroundColor: '#4A90E2',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  premiumActiveText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  premiumActiveSubtext: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  upgradeBanner: {
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  upgradeBannerText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  upgradeBannerSubtext: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  warningBanner: {
+    backgroundColor: '#FFA500',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  warningBannerText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  miniUpgradeButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  miniUpgradeText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   content: {
     flex: 1,
     paddingHorizontal: 20,
@@ -300,9 +483,42 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
     lineHeight: 24,
     paddingHorizontal: 20,
+  },
+  usageIndicator: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  usageText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  progressBar: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  progressDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  progressDotUsed: {
+    backgroundColor: '#FF6B6B',
+  },
+  progressDotRemaining: {
+    backgroundColor: '#4A90E2',
   },
   buttonContainer: {
     gap: 20,
@@ -375,8 +591,6 @@ const styles = StyleSheet.create({
     color: '#555',
     fontWeight: '500',
   },
-  
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -428,6 +642,29 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 20,
   },
+  menuPremiumStatus: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    alignItems: 'center',
+  },
+  menuPremiumActiveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4A90E2',
+  },
+  menuUpgradeButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  menuUpgradeText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -471,6 +708,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   menuFooterSubtext: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  menuFooterUsage: {
     fontSize: 12,
     color: '#999',
     textAlign: 'center',
