@@ -1,39 +1,175 @@
-/*// services/visionService.js
+// services/visionService.js - Final complete version
+import { getCurrentLanguage } from './languageService';
 
-// Configuration - Replace with your preferred LLM service
+// Configuration
 const LLM_CONFIG = {
-  // Option 1: OpenAI GPT-4 Vision (Recommended)
-  OPENAI: {
-    apiKey: 'YOUR_OPENAI_API_KEY_HERE', // Replace with your actual API key
-    model: 'gpt-4o', // Latest model with vision
-    endpoint: 'https://api.openai.com/v1/chat/completions'
-  },
-  
-  // Option 2: Anthropic Claude 3
-  ANTHROPIC: {
-    apiKey: 'YOUR_ANTHROPIC_API_KEY_HERE',
-    model: 'claude-3-sonnet-20240229',
-    endpoint: 'https://api.anthropic.com/v1/messages'
-  },
-  
-  // Option 3: Google Gemini Pro Vision
   GOOGLE: {
-    apiKey: 'AIzaSyBu1x67Ppr1WeT4rtOe5-eafa6E5Rhuuxc', // Your working API key
-    model: 'gemini-2.0-flash', // Updated to working model
+    apiKey: 'AIzaSyDi-tZX4XDIPIRyIevYEGnyOf-CNs2n_HM',
+    model: 'gemini-2.0-flash',
     endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
   }
 };
 
-// Set your preferred LLM service here
-const CURRENT_LLM = 'GOOGLE'; // Now using Google Gemini with your working API key
+const CURRENT_LLM = 'GOOGLE';
 
-export const analyzeHistoricalPlace = async (imageUri) => {
+// Helper function to format location for AI
+const formatLocationForAI = (locationData) => {
+  if (!locationData || !locationData.address) return '';
+  
+  const addr = locationData.address;
+  const parts = [];
+  
+  if (addr.street) parts.push(addr.street);
+  if (addr.city) parts.push(addr.city);
+  if (addr.region) parts.push(addr.region);
+  if (addr.country) parts.push(addr.country);
+  
+  return parts.join(', ');
+};
+
+// Language detection - uses user settings
+const getSelectedLanguage = async () => {
+  const language = await getCurrentLanguage();
+  console.log('Selected language for AI:', language);
+  return language;
+};
+
+// Language-specific prompts
+const getLanguagePrompt = (languageCode, locationContext) => {
+  const prompts = {
+    'tr': `Sen bir tarih uzmanı ve rehbersin. ${locationContext}Bu görüntüyü dikkatlice analiz et. Eğer görüntüde tarihi yerler, anıtlar, simge yapılar, heykeller veya mimari açıdan önemli binalar varsa, detaylı tarihi bilgi ver. Eğer görüntüde insanlar, modern binalar, doğa veya tarihi olmayan konular varsa, gördüklerini kibarca açıkla ve mümkün olduğunca ilgili tarihi veya kültürel bağlam sağla. Her zaman yardımcı ve eğitici ol. Yanıtını JSON formatında ver: name (isim), description (açıklama), location (konum), yearBuilt (yapım yılı), significance (önemi), architecture (mimari), funFacts (ilginç bilgiler dizisi). TÜRKÇE yanıt ver.`,
+    
+    'en': `You are an expert historian and travel guide. ${locationContext}Analyze this image carefully. If the image contains historical places, monuments, landmarks, statues, or architecturally significant buildings, provide detailed historical information. If the image shows people, modern buildings, nature, or other non-historical subjects, politely explain what you see and provide any relevant historical or cultural context. Always be helpful and educational. Format your response as JSON with fields: name, description, location, yearBuilt, significance, architecture, funFacts (array of strings). Respond in ENGLISH.`,
+    
+    'es': `Eres un historiador experto y guía turístico. ${locationContext}Analiza esta imagen cuidadosamente. Si la imagen contiene lugares históricos, monumentos, sitios emblemáticos, estatuas o edificios arquitectónicamente significativos, proporciona información histórica detallada. Si la imagen muestra personas, edificios modernos, naturaleza u otros temas no históricos, explica cortésmente lo que ves y proporciona cualquier contexto histórico o cultural relevante. Siempre sé útil y educativo. Formatea tu respuesta como JSON con campos: name, description, location, yearBuilt, significance, architecture, funFacts (array de strings). Responde en ESPAÑOL.`,
+    
+    'fr': `Vous êtes un historien expert et guide touristique. ${locationContext}Analysez cette image attentivement. Si l'image contient des lieux historiques, monuments, sites emblématiques, statues ou bâtiments architecturalement significatifs, fournissez des informations historiques détaillées. Si l'image montre des personnes, des bâtiments modernes, la nature ou d'autres sujets non historiques, expliquez poliment ce que vous voyez et fournissez tout contexte historique ou culturel pertinent. Soyez toujours utile et éducatif. Formatez votre réponse en JSON avec les champs: name, description, location, yearBuilt, significance, architecture, funFacts (array de strings). Répondez en FRANÇAIS.`,
+    
+    'de': `Sie sind ein Geschichtsexperte und Reiseführer. ${locationContext}Analysieren Sie dieses Bild sorgfältig. Wenn das Bild historische Orte, Denkmäler, Wahrzeichen, Statuen oder architektonisch bedeutsame Gebäude enthält, geben Sie detaillierte historische Informationen. Wenn das Bild Menschen, moderne Gebäude, Natur oder andere nicht-historische Themen zeigt, erklären Sie höflich, was Sie sehen, und geben Sie relevanten historischen oder kulturellen Kontext. Seien Sie immer hilfreich und lehrreich. Formatieren Sie Ihre Antwort als JSON mit Feldern: name, description, location, yearBuilt, significance, architecture, funFacts (Array von Strings). Antworten Sie auf DEUTSCH.`,
+    
+    'it': `Sei un esperto storico e guida turistica. ${locationContext}Analizza questa immagine attentamente. Se l'immagine contiene luoghi storici, monumenti, punti di riferimento, statue o edifici architettonicamente significativi, fornisci informazioni storiche dettagliate. Se l'immagine mostra persone, edifici moderni, natura o altri argomenti non storici, spiega cortesemente quello che vedi e fornisci qualsiasi contesto storico o culturale rilevante. Sii sempre utile ed educativo. Formatta la tua risposta come JSON con campi: name, description, location, yearBuilt, significance, architecture, funFacts (array di stringhe). Rispondi in ITALIANO.`,
+    
+    'ar': `أنت خبير تاريخ ومرشد سياحي. ${locationContext}حلل هذه الصورة بعناية. إذا كانت الصورة تحتوي على أماكن تاريخية أو آثار أو معالم أو تماثيل أو مباني ذات أهمية معمارية، قدم معلومات تاريخية مفصلة. إذا كانت الصورة تظهر أشخاصاً أو مباني حديثة أو طبيعة أو مواضيع أخرى غير تاريخية، اشرح بأدب ما تراه وقدم أي سياق تاريخي أو ثقافي ذي صلة. كن دائماً مفيداً وتعليمياً. صغ إجابتك بصيغة JSON مع الحقول: name, description, location, yearBuilt, significance, architecture, funFacts (مصفوفة من النصوص). أجب بالعربية.`,
+    
+    'ru': `Вы эксперт-историк и гид. ${locationContext}Внимательно проанализируйте это изображение. Если изображение содержит исторические места, памятники, достопримечательности, статуи или архитектурно значимые здания, предоставьте подробную историческую информацию. Если изображение показывает людей, современные здания, природу или другие неисторические темы, вежливо объясните то, что вы видите, и предоставьте любой соответствующий исторический или культурный контекст. Всегда будьте полезны и поучительны. Отформатируйте ваш ответ как JSON с полями: name, description, location, yearBuilt, significance, architecture, funFacts (массив строк). Отвечайте на РУССКОМ языке.`,
+    
+    'zh': `您是历史专家和导游。${locationContext}仔细分析这张图片。如果图片包含历史遗迹、纪念碑、地标、雕像或建筑上重要的建筑物，请提供详细的历史信息。如果图片显示人物、现代建筑、自然景观或其他非历史主题，请礼貌地解释您看到的内容，并提供任何相关的历史或文化背景。始终保持有用和教育性。将您的回复格式化为JSON，包含字段：name, description, location, yearBuilt, significance, architecture, funFacts（字符串数组）。请用中文回答。`,
+    
+    'ja': `あなたは歴史の専門家であり、ガイドです。${locationContext}この画像を注意深く分析してください。画像に歴史的な場所、記念碑、ランドマーク、彫像、または建築学的に重要な建物が含まれている場合は、詳細な歴史情報を提供してください。画像に人物、現代的な建物、自然、またはその他の非歴史的な主題が映っている場合は、見えるものを丁寧に説明し、関連する歴史的または文化的背景を提供してください。常に役立つ教育的な内容にしてください。回答をJSON形式でフォーマットし、以下のフィールドを含めてください：name, description, location, yearBuilt, significance, architecture, funFacts（文字列の配列）。日本語で回答してください。`
+  };
+  
+  // Default to English if language not supported
+  return prompts[languageCode] || prompts['en'];
+};
+
+// Demo data with language support
+const getDemoData = async (locationData = null) => {
+  console.log('getDemoData called with:', locationData);
+  
+  const languageCode = await getSelectedLanguage();
+  
+  const demoTexts = {
+    'tr': {
+      name: 'Demo Tarihi Anıt',
+      description: `Bu tarihi bir bina veya anıt gibi görünüyor. ${locationData?.address?.city ? `${locationData.address.city} bölgesinde` : ''} Gerçek analiz için LLM API anahtarınızı yapılandırın. Bu demo, API anahtarı eklediğinizde uygulamanın nasıl çalışacağını gösterir.`,
+      location: locationData?.address?.city ? `${locationData.address.city} yakını` : 'Demo Konum',
+      yearBuilt: 'Bilinmeyen Dönem',
+      significance: 'Bu demo verisidir. LLM API\'nizi yapılandırdığınızda, gerçek yerler ve anıtlar hakkında detaylı tarihi analiz alacaksınız.',
+      architecture: 'Çeşitli Mimari Stiller',
+      funFacts: [
+        'Bu, uygulama işlevselliğini göstermek için demo veridir',
+        'Konum algılama, AI\'nın daha doğru analiz sağlamasına yardımcı olur',
+        'Uygulama birden fazla LLM görü modelini destekler'
+      ]
+    },
+    'en': {
+      name: 'Demo Historical Monument',
+      description: `This appears to be a historical building or monument. ${locationData?.address?.city ? `Located in ${locationData.address.city} region.` : ''} Configure your LLM API key for real analysis. This demo shows how the app will work once you add your API key.`,
+      location: locationData?.address?.city ? `Near ${locationData.address.city}` : 'Demo Location',
+      yearBuilt: 'Unknown Period',
+      significance: 'This is demo data. Once you configure your LLM API, you\'ll get detailed historical analysis of real places and monuments.',
+      architecture: 'Various Architectural Styles',
+      funFacts: [
+        'This is demonstration data to show app functionality',
+        'Location detection helps AI provide more accurate analysis',
+        'The app supports multiple LLM vision models'
+      ]
+    }
+  };
+  
+  const texts = demoTexts[languageCode] || demoTexts['en'];
+  
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(texts);
+    }, 2000);
+  });
+};
+
+// Main export function
+export const analyzeHistoricalPlace = async (imageUri, locationData = null) => {
+  console.log('analyzeHistoricalPlace called with:');
+  console.log('- imageUri:', imageUri ? 'provided' : 'missing');
+  console.log('- locationData:', locationData);
+  
   try {
     // For demo mode, just return demo data
     if (CURRENT_LLM === 'DEMO') {
       console.log('Using demo mode - no API calls');
-      return getDemoData();
+      return getDemoData(locationData);
     }
+
+    // For Google API
+    if (CURRENT_LLM === 'GOOGLE') {
+      console.log('Using Google Gemini API');
+      return analyzeWithGemini(imageUri, locationData);
+    }
+
+    // Fallback
+    console.log('Falling back to demo data');
+    return getDemoData(locationData);
+    
+  } catch (error) {
+    console.error('Error in analyzeHistoricalPlace:', error);
+    // Return demo data if anything fails
+    return getDemoData(locationData);
+  }
+};
+
+// Google Gemini Implementation with language support
+const analyzeWithGemini = async (imageUri, locationData = null) => {
+  console.log('analyzeWithGemini called with locationData:', locationData);
+  
+  try {
+    const config = LLM_CONFIG.GOOGLE;
+    const languageCode = await getSelectedLanguage(); // Uses user settings
+    
+    // Format location context safely
+    let locationContext = '';
+    if (locationData) {
+      const formattedLocation = formatLocationForAI(locationData);
+      if (formattedLocation) {
+        const locationTexts = {
+          'tr': `Fotoğraf şu yerin yakınında çekildi: ${formattedLocation}. Bu konum bağlamını yeri daha doğru tanımlamak için kullan. `,
+          'en': `The photo was taken near: ${formattedLocation}. Use this location context to help identify the place more accurately. `,
+          'es': `La foto fue tomada cerca de: ${formattedLocation}. Usa este contexto de ubicación para ayudar a identificar el lugar con mayor precisión. `,
+          'fr': `La photo a été prise près de: ${formattedLocation}. Utilisez ce contexte de localisation pour aider à identifier le lieu avec plus de précision. `,
+          'de': `Das Foto wurde in der Nähe von aufgenommen: ${formattedLocation}. Verwenden Sie diesen Standortkontext, um den Ort genauer zu identifizieren. `,
+          'it': `La foto è stata scattata vicino a: ${formattedLocation}. Usa questo contesto di posizione per aiutare a identificare il luogo con maggiore precisione. `,
+          'ar': `تم التقاط الصورة بالقرب من: ${formattedLocation}. استخدم سياق الموقع هذا للمساعدة في تحديد المكان بدقة أكبر. `,
+          'ru': `Фотография была сделана рядом с: ${formattedLocation}. Используйте этот контекст местоположения, чтобы помочь более точно идентифицировать место. `,
+          'zh': `照片拍摄地点附近：${formattedLocation}。使用此位置背景来帮助更准确地识别地点。`,
+          'ja': `写真は次の場所の近くで撮影されました：${formattedLocation}。この位置情報を使用して、場所をより正确に特定してください。`
+        };
+        locationContext = locationTexts[languageCode] || locationTexts['en'];
+      }
+    }
+    
+    console.log('User selected language:', languageCode);
+    console.log('Location context for AI:', locationContext);
+
+    // Get language-specific prompt
+    const promptText = getLanguagePrompt(languageCode, locationContext);
 
     // Convert image to base64
     const imageData = await fetch(imageUri);
@@ -44,586 +180,119 @@ export const analyzeHistoricalPlace = async (imageUri) => {
       reader.onload = async () => {
         const base64Data = reader.result.split(',')[1];
         
-        try {
-          let result;
-          
-          switch (CURRENT_LLM) {
-            case 'OPENAI':
-              result = await analyzeWithOpenAI(base64Data);
-              break;
-            case 'ANTHROPIC':
-              result = await analyzeWithClaude(base64Data);
-              break;
-            case 'GOOGLE':
-              result = await analyzeWithGemini(base64Data);
-              break;
-            default:
-              console.log('Falling back to demo data');
-              result = await getDemoData();
-          }
-          
-          resolve(result);
-        } catch (apiError) {
-          console.error('LLM API Error:', apiError);
-          // Return demo data if API fails
-          resolve(getDemoData());
-        }
-      };
-      
-      reader.onerror = () => reject(new Error('Failed to read image'));
-      reader.readAsDataURL(imageBlob);
-    });
-  } catch (error) {
-    console.error('Image processing error:', error);
-    // Return demo data for development/testing
-    return getDemoData();
-  }
-};
-
-// Demo data function
-const getDemoData = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        name: 'Demo Historical Monument',
-        description: 'This appears to be a historical building or monument. To get real analysis, please configure your LLM API key in the visionService.js file. This demo shows how the app will work once you add your OpenAI, Claude, or Gemini API key.',
-        location: 'Demo Location',
-        yearBuilt: 'Unknown Period',
-        significance: 'This is demo data. Once you configure your LLM API, you\'ll get detailed historical analysis of real places and monuments.',
-        architecture: 'Various Architectural Styles',
-        funFacts: [
-          'This is demonstration data to show app functionality',
-          'Replace with real LLM integration for actual historical insights',
-          'The app supports OpenAI, Claude, and Gemini vision models'
-        ]
-      });
-    }, 2000);
-  });
-};
-
-// OpenAI GPT-4 Vision Implementation
-const analyzeWithOpenAI = async (base64Image) => {
-  const config = LLM_CONFIG.OPENAI;
-  
-  if (config.apiKey === 'YOUR_OPENAI_API_KEY_HERE') {
-    throw new Error('API key not configured');
-  }
-  
-  const prompt = `You are an expert historian and travel guide. Analyze this image and identify any historical places, monuments, landmarks, statues, or architecturally significant buildings.
-
-If you can identify the place, provide:
-1. The exact name of the place/monument
-2. Detailed historical background and significance
-3. Location (city, country)
-4. Year built or historical period
-5. Architectural style
-6. 2-3 interesting facts most people don't know
-7. Why it's historically important
-
-If you cannot identify the specific place, describe what you can see and provide general historical context about the architectural style, type of monument, or historical period it might belong to.
-
-Please format your response as a JSON object with these fields:
-- name: string
-- description: string (detailed historical context)
-- location: string
-- yearBuilt: string
-- significance: string
-- architecture: string
-- funFacts: array of strings
-
-Be informative and engaging, as if you're a knowledgeable tour guide.`;
-
-  const response = await fetch(config.endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: prompt
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
-  }
-
-  const result = await response.json();
-  const content = result.choices[0].message.content;
-  
-  try {
-    return JSON.parse(content);
-  } catch {
-    // If response isn't JSON, structure it manually
-    return {
-      name: 'Historical Place Identified',
-      description: content,
-      location: 'See description',
-      yearBuilt: 'Unknown',
-      significance: 'See description above',
-      architecture: 'Various',
-      funFacts: ['Check the description for interesting details']
-    };
-  }
-};
-
-// Anthropic Claude Implementation
-const analyzeWithClaude = async (base64Image) => {
-  const config = LLM_CONFIG.ANTHROPIC;
-  
-  if (config.apiKey === 'YOUR_ANTHROPIC_API_KEY_HERE') {
-    throw new Error('API key not configured');
-  }
-  
-  const response = await fetch(config.endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': config.apiKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: config.model,
-      max_tokens: 1000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image
-              }
-            },
-            {
-              type: 'text',
-              text: 'Analyze this image as an expert historian. Identify any historical places, monuments, or significant architecture. Provide detailed information in JSON format with fields: name, description, location, yearBuilt, significance, architecture, funFacts (array).'
-            }
-          ]
-        }
-      ]
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status}`);
-  }
-
-  const result = await response.json();
-  const content = result.content[0].text;
-  
-  try {
-    return JSON.parse(content);
-  } catch {
-    return {
-      name: 'Historical Analysis',
-      description: content,
-      location: 'See description',
-      yearBuilt: 'Unknown',
-      significance: 'See description',
-      architecture: 'Various',
-      funFacts: ['Analysis provided above']
-    };
-  }
-};
-
-// Google Gemini Implementation
-const analyzeWithGemini = async (base64Image) => {
-  const config = LLM_CONFIG.GOOGLE;
-  
-  if (config.apiKey === 'YOUR_GOOGLE_API_KEY_HERE') {
-    throw new Error('API key not configured');
-  }
-  
-  const response = await fetch(`${config.endpoint}?key=${config.apiKey}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            {
-              text: 'You are an expert historian and travel guide. Analyze this image and identify any historical places, monuments, landmarks, statues, or architecturally significant buildings. If you can identify the place, provide the exact name, detailed historical background, location, year built, architectural style, and interesting facts. If you cannot identify the specific place, describe what you can see and provide general historical context. Please format your response as a JSON object with fields: name, description, location, yearBuilt, significance, architecture, funFacts (array of strings). Be informative and engaging.'
-            },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Image
-              }
-            }
-          ]
-        }
-      ]
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Gemini API response:', errorText);
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  const result = await response.json();
-  console.log('Gemini API response:', result);
-  
-  if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
-    throw new Error('Invalid response from Gemini API');
-  }
-  
-  const content = result.candidates[0].content.parts[0].text;
-  
-  try {
-    // Try to parse JSON from the response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('No JSON found in response');
-  } catch {
-    // If response isn't JSON, structure it manually
-    return {
-      name: 'Historical Analysis from Gemini',
-      description: content,
-      location: 'Analysis provided',
-      yearBuilt: 'See description',
-      significance: 'Historical context provided in description',
-      architecture: 'See description',
-      funFacts: ['Detailed analysis provided by AI', 'Check description for more information']
-    };
-  }
-};*/
-
-// services/visionService.js
-
-// Configuration - Replace with your preferred LLM service
-const LLM_CONFIG = {
-  // Option 1: OpenAI GPT-4 Vision (Recommended)
-  OPENAI: {
-    apiKey: 'YOUR_OPENAI_API_KEY_HERE', // Replace with your actual API key
-    model: 'gpt-4o', // Latest model with vision
-    endpoint: 'https://api.openai.com/v1/chat/completions'
-  },
-  
-  // Option 2: Anthropic Claude 3
-  ANTHROPIC: {
-    apiKey: 'YOUR_ANTHROPIC_API_KEY_HERE',
-    model: 'claude-3-sonnet-20240229',
-    endpoint: 'https://api.anthropic.com/v1/messages'
-  },
-  
-  // Option 3: Google Gemini Pro Vision
-  GOOGLE: {
-    apiKey: 'AIzaSyBu1x67Ppr1WeT4rtOe5-eafa6E5Rhuuxc', // Your working API key
-    model: 'gemini-2.0-flash', // Updated to working model
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
-  }
-};
-
-// Set your preferred LLM service here
-const CURRENT_LLM = 'GOOGLE'; // Now using Google Gemini with your working API key
-
-export const analyzeHistoricalPlace = async (imageUri) => {
-  try {
-    // For demo mode, just return demo data
-    if (CURRENT_LLM === 'DEMO') {
-      console.log('Using demo mode - no API calls');
-      return getDemoData();
-    }
-
-    // Convert image to base64
-    const imageData = await fetch(imageUri);
-    const imageBlob = await imageData.blob();
-    const reader = new FileReader();
-    
-    return new Promise((resolve, reject) => {
-      reader.onload = async () => {
-        const base64Data = reader.result.split(',')[1];
+        console.log('Sending request to Gemini API in', languageCode);
         
+        const response = await fetch(`${config.endpoint}?key=${config.apiKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  {
+                    text: promptText
+                  },
+                  {
+                    inline_data: {
+                      mime_type: 'image/jpeg',
+                      data: base64Data
+                    }
+                  }
+                ]
+              }
+            ]
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Gemini API error:', response.status, errorText);
+          // Fallback to demo data in user's language
+          console.log('Falling back to demo data');
+          const demoResult = await getDemoData(locationData);
+          resolve(demoResult);
+          return;
+        }
+
+        const result = await response.json();
+        console.log('Gemini API response received in', languageCode);
+        
+        if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
+          console.error('Invalid Gemini response structure:', result);
+          const demoResult = await getDemoData(locationData);
+          resolve(demoResult);
+          return;
+        }
+        
+        const content = result.candidates[0].content.parts[0].text;
+        console.log('Content from Gemini:', content.substring(0, 200) + '...');
+        
+        // Try to parse JSON from the response
         try {
-          let result;
-          
-          switch (CURRENT_LLM) {
-            case 'OPENAI':
-              result = await analyzeWithOpenAI(base64Data);
-              break;
-            case 'ANTHROPIC':
-              result = await analyzeWithClaude(base64Data);
-              break;
-            case 'GOOGLE':
-              result = await analyzeWithGemini(base64Data);
-              break;
-            default:
-              console.log('Falling back to demo data');
-              result = await getDemoData();
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            console.log('Successfully parsed JSON from Gemini in', languageCode);
+            resolve(parsed);
+            return;
           }
+          throw new Error('No JSON found in response');
+        } catch (parseError) {
+          console.log('Could not parse JSON, creating structured response in', languageCode);
           
-          resolve(result);
-        } catch (apiError) {
-          console.error('LLM API Error:', apiError);
-          // Return demo data if API fails
-          resolve(getDemoData());
+          // Create structured response in user's language
+          const fallbackTitles = {
+            'tr': 'Gemini\'den Tarihi Analiz',
+            'en': 'Historical Analysis from Gemini',
+            'es': 'Análisis Histórico de Gemini',
+            'fr': 'Analyse Historique de Gemini',
+            'de': 'Historische Analyse von Gemini',
+            'it': 'Analisi Storica da Gemini',
+            'ar': 'التحليل التاريخي من جيميني',
+            'ru': 'Исторический анализ от Gemini',
+            'zh': '来自Gemini的历史分析',
+            'ja': 'Geminiからの歴史分析'
+          };
+          
+          const fallbackFactTexts = {
+            'tr': 'AI tarafından detaylı analiz sağlandı',
+            'en': 'Detailed analysis provided by AI',
+            'es': 'Análisis detallado proporcionado por IA',
+            'fr': 'Analyse détaillée fournie par l\'IA',
+            'de': 'Detaillierte Analyse von KI bereitgestellt',
+            'it': 'Analisi dettagliata fornita dall\'IA',
+            'ar': 'تحليل مفصل مقدم من الذكاء الاصطناعي',
+            'ru': 'Подробный анализ предоставлен ИИ',
+            'zh': 'AI提供的详细分析',
+            'ja': 'AIによる詳細な分析'
+          };
+          
+          resolve({
+            name: fallbackTitles[languageCode] || fallbackTitles['en'],
+            description: content,
+            location: 'Analysis provided',
+            yearBuilt: 'See description',
+            significance: 'Historical context provided in description',
+            architecture: 'See description',
+            funFacts: [fallbackFactTexts[languageCode] || fallbackFactTexts['en']]
+          });
         }
       };
       
-      reader.onerror = () => reject(new Error('Failed to read image'));
+      reader.onerror = () => {
+        console.error('Error reading image file');
+        // Fallback to demo data
+        getDemoData(locationData).then(resolve).catch(reject);
+      };
+      
       reader.readAsDataURL(imageBlob);
     });
+    
   } catch (error) {
-    console.error('Image processing error:', error);
-    // Return demo data for development/testing
-    return getDemoData();
-  }
-};
-
-// Demo data function
-const getDemoData = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        name: 'Demo Historical Monument',
-        description: 'This appears to be a historical building or monument. To get real analysis, please configure your LLM API key in the visionService.js file. This demo shows how the app will work once you add your OpenAI, Claude, or Gemini API key.',
-        location: 'Demo Location',
-        yearBuilt: 'Unknown Period',
-        significance: 'This is demo data. Once you configure your LLM API, you\'ll get detailed historical analysis of real places and monuments.',
-        architecture: 'Various Architectural Styles',
-        funFacts: [
-          'This is demonstration data to show app functionality',
-          'Replace with real LLM integration for actual historical insights',
-          'The app supports OpenAI, Claude, and Gemini vision models'
-        ]
-      });
-    }, 2000);
-  });
-};
-
-// OpenAI GPT-4 Vision Implementation
-const analyzeWithOpenAI = async (base64Image) => {
-  const config = LLM_CONFIG.OPENAI;
-  
-  if (config.apiKey === 'YOUR_OPENAI_API_KEY_HERE') {
-    throw new Error('API key not configured');
-  }
-  
-  const prompt = `You are an expert historian and travel guide. Analyze this image carefully.
-
-PRIMARY GOAL: Look for historical places, monuments, landmarks, statues, or architecturally significant buildings.
-
-IF HISTORICAL CONTENT FOUND:
-- Provide exact name, detailed historical background, location, year built, architectural style, and interesting facts
-
-IF NO HISTORICAL CONTENT (people, modern scenes, nature, etc.):
-- Politely acknowledge what you see
-- Provide any relevant historical or cultural context when possible
-- Examples: Traditional clothing → cultural history, Modern building → architectural style origins, Nature scene → historical significance of location if recognizable, Food → culinary history, etc.
-- Be educational and engaging even for non-historical subjects
-
-ALWAYS format as JSON with fields: name, description, location, yearBuilt, significance, architecture, funFacts (array).
-For non-historical content, adapt field names creatively (e.g., name: "Cultural Analysis", yearBuilt: "Modern Era").
-
-Be helpful, educational, and never refuse to analyze an image.`;
-
-  const response = await fetch(config.endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`,
-    },
-    body: JSON.stringify({
-      model: config.model,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: prompt
-            },
-            {
-              type: 'image_url',
-              image_url: {
-                url: `data:image/jpeg;base64,${base64Image}`
-              }
-            }
-          ]
-        }
-      ],
-      max_tokens: 1000,
-      temperature: 0.7
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
-  }
-
-  const result = await response.json();
-  const content = result.choices[0].message.content;
-  
-  try {
-    return JSON.parse(content);
-  } catch {
-    // If response isn't JSON, structure it manually
-    return {
-      name: 'Historical Place Identified',
-      description: content,
-      location: 'See description',
-      yearBuilt: 'Unknown',
-      significance: 'See description above',
-      architecture: 'Various',
-      funFacts: ['Check the description for interesting details']
-    };
-  }
-};
-
-// Anthropic Claude Implementation
-const analyzeWithClaude = async (base64Image) => {
-  const config = LLM_CONFIG.ANTHROPIC;
-  
-  if (config.apiKey === 'YOUR_ANTHROPIC_API_KEY_HERE') {
-    throw new Error('API key not configured');
-  }
-  
-  const response = await fetch(config.endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': config.apiKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model: config.model,
-      max_tokens: 1000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type: 'image/jpeg',
-                data: base64Image
-              }
-            },
-            {
-              type: 'text',
-              text: 'Analyze this image as an expert historian. Identify any historical places, monuments, or significant architecture. Provide detailed information in JSON format with fields: name, description, location, yearBuilt, significance, architecture, funFacts (array).'
-            }
-          ]
-        }
-      ]
-    })
-  });
-
-  if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status}`);
-  }
-
-  const result = await response.json();
-  const content = result.content[0].text;
-  
-  try {
-    return JSON.parse(content);
-  } catch {
-    return {
-      name: 'Historical Analysis',
-      description: content,
-      location: 'See description',
-      yearBuilt: 'Unknown',
-      significance: 'See description',
-      architecture: 'Various',
-      funFacts: ['Analysis provided above']
-    };
-  }
-};
-
-// Google Gemini Implementation
-const analyzeWithGemini = async (base64Image) => {
-  const config = LLM_CONFIG.GOOGLE;
-  
-  if (config.apiKey === 'YOUR_GOOGLE_API_KEY_HERE') {
-    throw new Error('API key not configured');
-  }
-  
-  const response = await fetch(`${config.endpoint}?key=${config.apiKey}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            {
-              text: 'You are an expert historian and travel guide. Analyze this image carefully. If the image contains historical places, monuments, landmarks, statues, or architecturally significant buildings, provide detailed historical information. If the image shows people, modern buildings, nature, or other non-historical subjects, politely explain what you see and try to provide any relevant historical or cultural context if possible. For example, if it\'s a person in traditional clothing, discuss the cultural history; if it\'s a modern building, mention the architectural style and its historical roots; if it\'s nature, discuss any historical significance of the location if recognizable. Always be helpful and educational. Format your response as JSON with fields: name, description, location, yearBuilt, significance, architecture, funFacts (array). If it\'s not a historical place, use creative but accurate field names like name: "Cultural Analysis" or "Architectural Context".'
-            },
-            {
-              inline_data: {
-                mime_type: 'image/jpeg',
-                data: base64Image
-              }
-            }
-          ]
-        }
-      ]
-    })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Gemini API response:', errorText);
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  const result = await response.json();
-  console.log('Gemini API response:', result);
-  
-  if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
-    throw new Error('Invalid response from Gemini API');
-  }
-  
-  const content = result.candidates[0].content.parts[0].text;
-  
-  try {
-    // Try to parse JSON from the response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
-    }
-    throw new Error('No JSON found in response');
-  } catch {
-    // If response isn't JSON, structure it manually
-    return {
-      name: 'Historical Analysis from Gemini',
-      description: content,
-      location: 'Analysis provided',
-      yearBuilt: 'See description',
-      significance: 'Historical context provided in description',
-      architecture: 'See description',
-      funFacts: ['Detailed analysis provided by AI', 'Check description for more information']
-    };
+    console.error('Error in analyzeWithGemini:', error);
+    // Fallback to demo data in user's language
+    return getDemoData(locationData);
   }
 };
