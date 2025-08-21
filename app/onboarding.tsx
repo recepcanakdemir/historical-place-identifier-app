@@ -31,11 +31,14 @@ export default function OnboardingScreen() {
       savings: 'Save 50%',
       popular: true,
       features: [
+        'Everything in Monthly',
+        'Best value - 5 months free',
         'Unlimited historical analysis',
-        'Priority AI processing',
-        'Advanced saving & export',
-        'Exclusive content access',
-        'Premium support'
+        //'Exclusive historical content',
+        'Early access to new features',
+        'Premium badge',
+        'Advanced saving features',
+        'Export the information as PDF'
       ]
     },
     {
@@ -45,9 +48,13 @@ export default function OnboardingScreen() {
       period: 'per month',
       features: [
         'Unlimited historical analysis',
-        'Priority AI processing',
         'Advanced saving features',
-        'Premium support'
+        'Everything in Monthly',
+        'Best value - 5 months free',
+        //'Exclusive historical content',
+        'Early access to new features',
+        'Premium badge',
+        'Export the information as PDF'
       ]
     }
   ];

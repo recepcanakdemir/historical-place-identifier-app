@@ -44,9 +44,11 @@ export default function PremiumScreen() {
       features: [
         'Everything in Monthly',
         'Best value - 5 months free',
-        'Exclusive historical content',
+        //'Exclusive historical content',
         'Early access to new features',
-        'Premium badge'
+        'Premium badge',
+        'Save your favourite places',
+        'Export the information as PDF'
       ]
     }
   ];

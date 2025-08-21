@@ -63,7 +63,7 @@ export const completeOnboarding = async () => {
 // NEW LOGIC: Show onboarding if user is NOT premium
 export const shouldShowOnboarding = async () => {
   try {
-    // Check if user is premium from usageService
+    // Only check local usageService for premium status
     const isPremium = await isPremiumUser();
     console.log('🔍 Premium check from usageService:', isPremium);
     
@@ -72,28 +72,7 @@ export const shouldShowOnboarding = async () => {
       return false;
     }
     
-    // Check if onboarding was completed this session
-    const sessionCompleted = await AsyncStorage.getItem('session_onboarding_completed');
-    if (sessionCompleted === 'true') {
-      console.log('shouldShowOnboarding: false (session onboarding completed)');
-      return false;
-    }
-    
-    // Also check subscription service as backup
-    try {
-      const { checkSubscriptionStatus } = require('./subscriptionService');
-      const subStatus = await checkSubscriptionStatus();
-      console.log('🔍 Premium check from subscriptionService:', subStatus?.isPremium);
-      
-      if (subStatus?.isPremium) {
-        console.log('shouldShowOnboarding: false (subscription is premium)');
-        return false;
-      }
-    } catch (error) {
-      console.log('Could not check subscription service:', error.message);
-    }
-    
-    console.log('shouldShowOnboarding: true (user is not premium and session not completed)');
+    console.log('shouldShowOnboarding: true (user is not premium)');
     return true;
     
   } catch (error) {
