@@ -1,5 +1,5 @@
-// app/index.tsx - Fixed TypeScript Errors
-import React, { useState, useRef, useEffect } from 'react';
+// app/index.tsx - Self-Managing with Onboarding Check
+import React, { useState, useRef, useEffect, JSX } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Dimensions,
   StatusBar,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -20,6 +21,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { getCurrentLanguage, getUITexts } from '../services/languageService';
 import { getUsageStats } from '../services/usageService';
 import { checkSubscriptionStatus } from '../services/subscriptionService';
+import { isPremiumUser } from '../services/usageService';
 import { UsageStats, SubscriptionStatus } from '../types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -33,10 +35,39 @@ export default function HomeScreen() {
   const slideAnim = useRef(new Animated.Value(-280)).current;
   const insets = useSafeAreaInsets();
 
-  // Load data when screen focuses
+  // Check if should redirect to onboarding
   useFocusEffect(
     React.useCallback(() => {
-      loadAppData();
+      const checkAndRedirect = async () => {
+        try {
+          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          
+          // Check if user is premium
+          const isPremium = await isPremiumUser();
+          console.log('🏠 Index screen - Premium status:', isPremium);
+          
+          // Check if free trial is active for this session
+          const freeTrialActive = await AsyncStorage.getItem('free_trial_active');
+          console.log('🏠 Index screen - Free trial active:', freeTrialActive);
+          
+          if (!isPremium && freeTrialActive !== 'true') {
+            console.log('🎯 User not premium and no free trial, redirecting to onboarding');
+            router.replace('/onboarding');
+            return;
+          }
+          
+          // If premium or free trial active, load normal data
+          console.log('✅ User can access main app');
+          loadAppData();
+          
+        } catch (error) {
+          console.error('❌ Error checking premium status:', error);
+          // On error, load app normally
+          loadAppData();
+        }
+      };
+      
+      checkAndRedirect();
     }, [])
   );
 
@@ -55,7 +86,7 @@ export default function HomeScreen() {
       const subStatus = await checkSubscriptionStatus();
       setSubscriptionStatus(subStatus);
       
-      console.log('Home screen data loaded:', { language, stats, subStatus });
+      console.log('🏠 Home screen data loaded:', { language, stats, subStatus });
     } catch (error) {
       console.error('Error loading app data:', error);
     }
@@ -174,9 +205,9 @@ export default function HomeScreen() {
       );
     }
 
-    const remaining = Math.max(0, usageStats?.remainingFreeAnalyses || 0); // Ensure non-negative
+    const remaining = Math.max(0, usageStats?.remainingFreeAnalyses || 0);
     const total = 3;
-    const used = Math.max(0, total - remaining); // Ensure non-negative
+    const used = Math.max(0, total - remaining);
 
     return (
       <View style={styles.usageIndicator}>
@@ -212,8 +243,12 @@ export default function HomeScreen() {
       {/* Premium/Usage Banner */}
       {renderPremiumBanner()}
 
-      {/* Main Content */}
-      <View style={styles.content}>
+      {/* Main Content with ScrollView */}
+      <ScrollView 
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.logoContainer}>
           <View style={styles.logoBackground}>
             <Text style={styles.logoEmoji}>🏛️</Text>
@@ -264,7 +299,7 @@ export default function HomeScreen() {
             <Text style={styles.featureText}>{uiTexts.saveDiscoveries || 'Save your discoveries'}</Text>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Hamburger Menu Modal */}
       {menuVisible && (
@@ -449,8 +484,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 40,
+    paddingBottom: 40,
   },
   logoContainer: {
     alignItems: 'center',

@@ -1,9 +1,8 @@
-// services/subscriptionService.js - Fixed Errors
-import Purchases from 'react-native-purchases';
-import { Platform } from 'react-native'; // Bu import eksikti!
-import { setPremiumStatus } from './usageService';
+// services/subscriptionService.js - Mock Mode Using Local Premium
+import { Platform } from 'react-native';
+import { isPremiumUser, setPremiumStatus } from './usageService';
 
-// RevenueCat API Keys (replace with your actual keys)
+// RevenueCat API Keys (replace with your actual keys when ready)
 const REVENUECAT_API_KEY_IOS = 'appl_your_api_key_here';
 const REVENUECAT_API_KEY_ANDROID = 'goog_your_api_key_here';
 
@@ -13,30 +12,14 @@ export const SUBSCRIPTION_IDS = {
   YEARLY: 'yearly_premium',
 };
 
-// Initialize RevenueCat
+// Initialize RevenueCat (Mock Mode)
 export const initializePurchases = async () => {
   try {
-    console.log('Initializing RevenueCat...');
+    console.log('Initializing RevenueCat in Mock Mode...');
     
-    // Platform-specific API key
-    const apiKey = Platform.OS === 'ios' ? REVENUECAT_API_KEY_IOS : REVENUECAT_API_KEY_ANDROID;
-    
-    // Check if we have valid API key
-    if (apiKey === 'appl_your_api_key_here' || apiKey === 'goog_your_api_key_here') {
-      console.log('RevenueCat API key not configured - using mock mode');
-      return false; // Skip initialization
-    }
-    
-    await Purchases.configureWith({
-      apiKey: apiKey,
-      observerMode: false,
-    });
-    
-    console.log('RevenueCat initialized successfully');
-    
-    // Check current subscription status
-    await checkSubscriptionStatus();
-    return true;
+    // Since we don't have real API keys, just skip RevenueCat
+    console.log('RevenueCat API key not configured - using mock mode');
+    return false; // Skip initialization
     
   } catch (error) {
     console.error('Error initializing RevenueCat:', error);
@@ -44,48 +27,23 @@ export const initializePurchases = async () => {
   }
 };
 
-// Check current subscription status
+// Check current subscription status (Mock - uses local premium)
 export const checkSubscriptionStatus = async () => {
   try {
-    console.log('Checking subscription status...');
+    console.log('Checking subscription status in mock mode...');
     
-    // Check if RevenueCat is initialized by trying to get app user ID
-    try {
-      await Purchases.getAppUserID();
-    } catch (e) {
-      console.log('RevenueCat not initialized, returning mock status');
-      await setPremiumStatus(false);
-      return {
-        isPremium: false,
-        expirationDate: null,
-        originalPurchaseDate: null,
-      };
-    }
-    
-    const customerInfo = await Purchases.getCustomerInfo();
-    
-    // Check if user has active subscription
-    const hasActiveSubscription = customerInfo.entitlements.active['premium'] !== undefined;
-    
-    console.log('Active subscription:', hasActiveSubscription);
-    
-    // Update local premium status
-    await setPremiumStatus(hasActiveSubscription);
+    // Use local premium status instead of RevenueCat
+    const isPremium = await isPremiumUser();
+    console.log('Mock subscription check - isPremium:', isPremium);
     
     return {
-      isPremium: hasActiveSubscription,
-      expirationDate: hasActiveSubscription 
-        ? customerInfo.entitlements.active['premium'].expirationDate 
-        : null,
-      originalPurchaseDate: hasActiveSubscription 
-        ? customerInfo.entitlements.active['premium'].originalPurchaseDate 
-        : null,
+      isPremium: isPremium,
+      expirationDate: isPremium ? null : null, // Premium doesn't expire in mock mode
+      originalPurchaseDate: isPremium ? new Date().toISOString() : null,
     };
     
   } catch (error) {
     console.error('Error checking subscription status:', error);
-    // Return safe defaults
-    await setPremiumStatus(false);
     return { 
       isPremium: false, 
       expirationDate: null,
@@ -94,40 +52,30 @@ export const checkSubscriptionStatus = async () => {
   }
 };
 
-// Get available subscription packages
+// Get available subscription packages (Mock)
 export const getSubscriptionPackages = async () => {
   try {
-    console.log('Getting subscription packages...');
+    console.log('Getting subscription packages in mock mode...');
     
-    // Check if RevenueCat is initialized
-    try {
-      await Purchases.getAppUserID();
-    } catch (e) {
-      console.log('RevenueCat not initialized, returning empty packages');
-      return [];
-    }
-    
-    const offerings = await Purchases.getOfferings();
-    
-    if (offerings.current !== null) {
-      const packages = offerings.current.availablePackages;
-      
-      // Format packages for UI
-      const formattedPackages = packages.map(pkg => ({
-        id: pkg.identifier,
-        product: pkg.product,
-        title: pkg.product.title,
-        description: pkg.product.description,
-        price: pkg.product.priceString,
-        period: pkg.packageType,
-        originalPrice: pkg.product.price,
-      }));
-      
-      console.log('Available packages:', formattedPackages);
-      return formattedPackages;
-    }
-    
-    return [];
+    // Return mock packages
+    return [
+      {
+        id: 'monthly',
+        title: 'Monthly Premium',
+        description: 'Unlimited historical analysis',
+        price: '$4.99',
+        period: 'monthly',
+        originalPrice: 4.99,
+      },
+      {
+        id: 'yearly',
+        title: 'Yearly Premium',
+        description: 'Unlimited historical analysis - Best Value',
+        price: '$29.99',
+        period: 'yearly',
+        originalPrice: 29.99,
+      }
+    ];
     
   } catch (error) {
     console.error('Error getting packages:', error);
@@ -135,97 +83,46 @@ export const getSubscriptionPackages = async () => {
   }
 };
 
-// Purchase subscription
+// Purchase subscription (Mock)
 export const purchaseSubscription = async (packageToPurchase) => {
   try {
-    console.log('Attempting to purchase:', packageToPurchase.id);
+    console.log('Mock purchase for:', packageToPurchase.id);
     
-    // Check if RevenueCat is initialized
-    try {
-      await Purchases.getAppUserID();
-    } catch (e) {
-      return {
-        success: false,
-        message: 'Purchase system not available. Please try again later.',
-      };
-    }
+    // Simulate purchase delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const purchaseResult = await Purchases.purchasePackage(packageToPurchase);
-    
-    console.log('Purchase successful:', purchaseResult);
-    
-    // Check if the purchase grants premium access
-    const hasActiveSubscription = purchaseResult.customerInfo.entitlements.active['premium'] !== undefined;
-    
-    if (hasActiveSubscription) {
-      await setPremiumStatus(true);
-      console.log('Premium access granted');
-      
-      return {
-        success: true,
-        customerInfo: purchaseResult.customerInfo,
-        message: 'Welcome to Premium! You now have unlimited access.',
-      };
-    }
+    // Grant premium access locally
+    await setPremiumStatus(true);
+    console.log('Mock purchase completed - Premium access granted');
     
     return {
-      success: false,
-      message: 'Purchase completed but premium access not activated.',
+      success: true,
+      customerInfo: null,
+      message: 'Mock purchase completed successfully!',
     };
     
   } catch (error) {
-    console.error('Purchase error:', error);
-    
-    // Handle different error types
-    if (error.code === 'PURCHASE_CANCELLED') {
-      return {
-        success: false,
-        message: 'Purchase was cancelled.',
-        cancelled: true,
-      };
-    }
-    
-    if (error.code === 'PAYMENT_PENDING') {
-      return {
-        success: false,
-        message: 'Payment is pending. You will receive access once payment is confirmed.',
-        pending: true,
-      };
-    }
-    
+    console.error('Mock purchase error:', error);
     return {
       success: false,
-      message: 'Purchase failed. Please try again.',
+      message: 'Mock purchase failed. Please try again.',
       error: error.message,
     };
   }
 };
 
-// Restore purchases
+// Restore purchases (Mock)
 export const restorePurchases = async () => {
   try {
-    console.log('Restoring purchases...');
+    console.log('Mock restore purchases...');
     
-    // Check if RevenueCat is initialized
-    try {
-      await Purchases.getAppUserID();
-    } catch (e) {
-      return {
-        success: false,
-        message: 'Restore system not available. Please try again later.',
-      };
-    }
+    // Simulate restore delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    const customerInfo = await Purchases.restorePurchases();
+    // Check current premium status
+    const isPremium = await isPremiumUser();
     
-    console.log('Restore result:', customerInfo);
-    
-    // Check if user has active subscription after restore
-    const hasActiveSubscription = customerInfo.entitlements.active['premium'] !== undefined;
-    
-    await setPremiumStatus(hasActiveSubscription);
-    
-    if (hasActiveSubscription) {
+    if (isPremium) {
       return {
         success: true,
         message: 'Premium access restored successfully!',
@@ -240,7 +137,7 @@ export const restorePurchases = async () => {
     };
     
   } catch (error) {
-    console.error('Restore error:', error);
+    console.error('Mock restore error:', error);
     return {
       success: false,
       message: 'Failed to restore purchases. Please try again.',
@@ -249,65 +146,49 @@ export const restorePurchases = async () => {
   }
 };
 
-// Get customer info
+// Get customer info (Mock)
 export const getCustomerInfo = async () => {
   try {
-    // Check if RevenueCat is initialized
-    try {
-      await Purchases.getAppUserID();
-    } catch (e) {
-      return null;
-    }
+    const isPremium = await isPremiumUser();
     
-    const customerInfo = await Purchases.getCustomerInfo();
-    return customerInfo;
+    return {
+      isPremium,
+      entitlements: {
+        active: isPremium ? { 'premium': { 
+          expirationDate: null,
+          originalPurchaseDate: new Date().toISOString()
+        }} : {}
+      }
+    };
   } catch (error) {
     console.error('Error getting customer info:', error);
     return null;
   }
 };
 
-// Set user identifier (useful for analytics)
+// Set user identifier (Mock)
 export const setUserIdentifier = async (userId) => {
   try {
-    await Purchases.logIn(userId);
-    console.log('User identifier set:', userId);
+    console.log('Mock user identifier set:', userId);
   } catch (error) {
     console.error('Error setting user identifier:', error);
   }
 };
 
-// Log out user (useful when switching accounts)
+// Log out user (Mock)
 export const logOutUser = async () => {
   try {
-    await Purchases.logOut();
     await setPremiumStatus(false);
-    console.log('User logged out');
+    console.log('Mock user logged out');
   } catch (error) {
     console.error('Error logging out user:', error);
   }
 };
 
-// Check if subscription is about to expire (for reminders)
+// Check if subscription is about to expire (Mock - always false)
 export const isSubscriptionExpiringSoon = async (daysThreshold = 7) => {
-  try {
-    const status = await checkSubscriptionStatus();
-    
-    if (!status.isPremium || !status.expirationDate) {
-      return false;
-    }
-    
-    const expirationDate = new Date(status.expirationDate);
-    const currentDate = new Date();
-    const timeDiff = expirationDate.getTime() - currentDate.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    
-    return daysDiff <= daysThreshold && daysDiff > 0;
-    
-  } catch (error) {
-    console.error('Error checking expiration:', error);
-    return false;
-  }
+  // In mock mode, premium never expires
+  return false;
 };
 
 // Helper function to format subscription period

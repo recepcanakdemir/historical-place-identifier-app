@@ -19,16 +19,6 @@ import { saveHistoricalPlace } from '../services/storageService';
 import { canPerformAnalysis, useAnalysis, getUsageStats } from '../services/usageService';
 import { PlaceInfo, UsageStats } from '../types';
 
-interface PlaceInfo {
-  name: string;
-  description: string;
-  location?: string;
-  yearBuilt?: string;
-  significance?: string;
-  architecture?: string;
-  funFacts?: string[];
-}
-
 export default function ResultScreen() {
   const { imageUri, locationData, savedData, fromSaved, fromGallery } = useLocalSearchParams<{ 
     imageUri: string;
@@ -61,6 +51,12 @@ export default function ResultScreen() {
 
   const loadSavedData = () => {
     try {
+      if (!savedData) {
+        setError('No saved data provided');
+        setLoading(false);
+        return;
+      }
+      
       const parsed = JSON.parse(savedData);
       setPlaceInfo(parsed);
       setIsSaved(true);
