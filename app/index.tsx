@@ -15,9 +15,10 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { checkAppAccess } from '../services/accessService';
 import { getCurrentLanguage, getUITexts } from '../services/languageService';
 import { checkSubscriptionStatus } from '../services/subscriptionService';
-import { getUsageStats, isPremiumUser } from '../services/usageService';
+import { getUsageStats } from '../services/usageService';
 import { SubscriptionStatus, UsageStats } from '../types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -77,31 +78,19 @@ export default function HomeScreen() {
     }
   };
 
-  // Check if should redirect to onboarding
+  // Check if should redirect to paywall
   useFocusEffect(
     React.useCallback(() => {
       const checkAndRedirect = async () => {
         try {
-          const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+          // Use new unified access service
+          const accessResult = await checkAppAccess();
+          console.log('🏠 Index screen - Access result:', accessResult);
           
-          // Check if user is premium
-          const isPremium = await isPremiumUser();
-          console.log('🏠 Index screen - Premium status:', isPremium);
-          
-          // Check trial status
-          const trial = await checkTrialStatus();
-          console.log('🏠 Index screen - Trial status:', trial);
-          
-          // Check if free trial is active for this session
-          const freeTrialActive = await AsyncStorage.getItem('free_trial_active');
-          console.log('🏠 Index screen - Free trial active:', freeTrialActive);
-          
-          // Allow access if: premium, trial active, or free trial session active
-          const hasAccess = isPremium || trial.isActive || freeTrialActive === 'true';
-          
-          if (!hasAccess) {
-            console.log('🎯 User needs access, redirecting to onboarding');
-            router.replace('/onboarding');
+          if (!accessResult.hasAccess && accessResult.shouldShowPaywall) {
+            const source = accessResult.paywallSource || 'upgrade';
+            console.log(`🎯 Redirecting to paywall with source: ${source}`);
+            router.replace(`/paywall?source=${source}`);
             return;
           }
           
@@ -203,7 +192,7 @@ export default function HomeScreen() {
 
   const navigateToPremium = (): void => {
     closeMenu();
-    setTimeout(() => router.push('/premium'), 200);
+    setTimeout(() => router.push('/paywall?source=upgrade'), 200);
   };
 
   const renderPremiumBanner = (): JSX.Element | null => {

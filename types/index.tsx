@@ -72,3 +72,10 @@ export interface PurchaseResult {
   customerInfo?: any;
   error?: string;
 }
+
+export interface AccessResult {
+  hasAccess: boolean;
+  reason: string;
+  shouldShowPaywall: boolean;
+  paywallSource?: 'onboarding' | 'upgrade' | 'limit' | 'settings';
+}

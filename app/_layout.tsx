@@ -1,9 +1,9 @@
-// app/_layout.tsx - Ultra Simple Solution
-import React, { useEffect, useState } from 'react';
+// app/_layout.tsx - Updated Routes
 import { Stack } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, Text } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { endFreeTrialSession } from '../services/accessService';
 import { initializePurchases } from '../services/subscriptionService';
 
 export default function RootLayout() {
@@ -15,8 +15,7 @@ export default function RootLayout() {
         console.log('🚀 Initializing app...');
         
         // Clear free trial session on app restart
-        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-        await AsyncStorage.removeItem('free_trial_active');
+        await endFreeTrialSession();
         console.log('🧹 Free trial session cleared on app start');
         
         // Initialize subscription service
@@ -62,10 +61,11 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen 
-          name="onboarding" 
+          name="paywall" 
           options={{ 
             headerShown: false,
-            gestureEnabled: false
+            gestureEnabled: false,
+            presentation: 'modal'
           }} 
         />
         <Stack.Screen 
@@ -100,14 +100,6 @@ export default function RootLayout() {
           options={{ 
             title: 'Settings',
             headerShown: true
-          }} 
-        />
-        <Stack.Screen 
-          name="premium" 
-          options={{ 
-            title: 'Premium',
-            headerShown: true,
-            presentation: 'modal'
           }} 
         />
       </Stack>

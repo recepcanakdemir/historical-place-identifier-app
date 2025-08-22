@@ -1,22 +1,22 @@
-// app/result.tsx - Updated with Usage Limits
-import React, { useState, useEffect } from 'react';
+// app/result.tsx - Updated with Paywall Integration
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Alert,
-  Share,
+  Image,
   Modal,
+  SafeAreaView,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
-import { analyzeHistoricalPlace } from '../services/visionService';
 import { saveHistoricalPlace } from '../services/storageService';
-import { canPerformAnalysis, useAnalysis, getUsageStats } from '../services/usageService';
+import { canPerformAnalysis, getUsageStats, useAnalysis } from '../services/usageService';
+import { analyzeHistoricalPlace } from '../services/visionService';
 import { PlaceInfo, UsageStats } from '../types';
 
 export default function ResultScreen() {
@@ -175,8 +175,8 @@ export default function ResultScreen() {
 
   const handleUpgradeToPremium = () => {
     setShowLimitModal(false);
-    // Navigate to premium screen (we'll create this next)
-    router.push('/premium');
+    // Navigate to paywall screen with limit source
+    router.push('/paywall?source=limit');
   };
 
   const handleTryAgain = () => {

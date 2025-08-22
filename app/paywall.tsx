@@ -1,5 +1,5 @@
-// app/premium.tsx - Stable Version
-import { router } from 'expo-router';
+// app/paywall.tsx - Unified Paywall Screen
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -12,16 +12,22 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { hasFreeTrialBeenUsed, startFreeTrialSession } from '../services/accessService';
 import { checkSubscriptionStatus } from '../services/subscriptionService';
 import { getUsageStats, setPremiumStatus } from '../services/usageService';
 import { SubscriptionStatus, UsageStats } from '../types';
 
-export default function PremiumScreen() {
+type PaywallSource = 'onboarding' | 'upgrade' | 'limit' | 'settings';
+
+export default function PaywallScreen() {
+    const { source = 'upgrade' } = useLocalSearchParams<{ source?: PaywallSource }>();
+    
     const [loading, setLoading] = useState<boolean>(false);
     const [selectedPlan, setSelectedPlan] = useState<string>('weekly');
     const [freeAnalysesEnabled, setFreeAnalysesEnabled] = useState<boolean>(true);
     const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
     const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+    const [freeTrialUsed, setFreeTrialUsed] = useState<boolean>(false);
 
     useEffect(() => {
         loadData();
@@ -34,13 +40,18 @@ export default function PremiumScreen() {
             
             const subStatus = await checkSubscriptionStatus();
             setSubscriptionStatus(subStatus as SubscriptionStatus);
+            
+            const trialUsed = await hasFreeTrialBeenUsed();
+            setFreeTrialUsed(trialUsed);
+            
+            console.log('Paywall - Data loaded:', { stats, subStatus, trialUsed });
         } catch (error) {
-            console.error('Error loading premium screen data:', error);
+            console.error('Error loading paywall data:', error);
         }
     };
 
     const handlePlanChange = (planId: string) => {
-        console.log('Premium - Plan changed to:', planId);
+        console.log('Paywall - Plan changed to:', planId);
         setSelectedPlan(planId);
         
         // Lifetime seçilince free analyses toggle kapatılır
@@ -52,7 +63,7 @@ export default function PremiumScreen() {
     };
 
     const handleToggleChange = (value: boolean) => {
-        console.log('Premium - Toggle changed to:', value);
+        console.log('Paywall - Toggle changed to:', value);
         setFreeAnalysesEnabled(value);
         
         // Toggle açılınca weekly seçilir
@@ -65,13 +76,14 @@ export default function PremiumScreen() {
         setLoading(true);
 
         try {
-            console.log('Premium - Attempting to purchase:', planId);
+            console.log('Paywall - Attempting to purchase:', planId);
 
             // Simulate purchase process
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Grant premium access
             await setPremiumStatus(true);
+            console.log('Paywall - Premium status granted');
 
             Alert.alert(
                 'Welcome to Premium! 🎉',
@@ -79,18 +91,17 @@ export default function PremiumScreen() {
                 [
                     {
                         text: 'Start Exploring',
-                        onPress: () => router.back()
+                        onPress: () => {
+                            console.log('Paywall - Navigating after purchase, source:', source);
+                            // Always go to main app after purchase
+                            router.replace('/');
+                        }
                     }
                 ]
             );
-
         } catch (error) {
-            console.error('Premium - Purchase error:', error);
-            Alert.alert(
-                'Purchase Failed',
-                'There was an issue processing your purchase. Please try again.',
-                [{ text: 'OK' }]
-            );
+            console.error('Paywall - Purchase error:', error);
+            Alert.alert('Purchase Failed', 'There was an issue processing your purchase. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -98,35 +109,86 @@ export default function PremiumScreen() {
 
     const startFreeAnalyses = async () => {
         try {
-            console.log('Premium - Starting free analyses...');
+            console.log('Paywall - Starting free analyses...');
 
-            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-            await AsyncStorage.setItem('free_trial_active', 'true');
-            console.log('Premium - Free analyses session set');
+            await startFreeTrialSession();
+            console.log('Paywall - Free analyses session set');
 
-            Alert.alert(
-                'Free Analyses Started! 🎁',
-                'You now have 3 free analyses to try our premium features.',
-                [
-                    {
-                        text: 'Start Exploring',
-                        onPress: () => router.back()
-                    }
-                ]
-            );
+            // Always navigate to main app after starting free trial
+            console.log('Paywall - Navigating to main app after free trial start');
+            router.replace('/');
 
         } catch (error) {
-            console.error('Premium - Error starting free analyses:', error);
+            console.error('Paywall - Error starting free analyses:', error);
             Alert.alert('Error', 'Something went wrong. Please try again.');
         }
     };
 
+    const handleClose = () => {
+        console.log('Paywall - Closing with source:', source);
+        
+        if (source === 'onboarding') {
+            // Onboarding'den geliyorsa ana sayfaya git
+            console.log('Paywall - Redirecting to main app from onboarding');
+            router.replace('/');
+        } else {
+            // Diğer durumlar - geri gitmeye çalış, hata olursa ana sayfaya git
+            try {
+                if (router.canGoBack()) {
+                    console.log('Paywall - Going back');
+                    router.back();
+                } else {
+                    console.log('Paywall - Cannot go back, redirecting to main app');
+                    router.replace('/');
+                }
+            } catch (error) {
+                console.log('Paywall - Error going back, redirecting to main app:', error);
+                router.replace('/');
+            }
+        }
+    };
+
+    // Get dynamic content based on source
+    const getContent = () => {
+        switch (source) {
+            case 'onboarding':
+                return {
+                    title: 'Welcome to Historical Places',
+                    subtitle: 'Discover the stories behind monuments and landmarks',
+                    showUsageStats: false
+                };
+            case 'limit':
+                return {
+                    title: 'Analysis Limit Reached',
+                    subtitle: 'Upgrade to continue discovering historical places',
+                    showUsageStats: true
+                };
+            case 'settings':
+                return {
+                    title: 'Premium Access',
+                    subtitle: 'Unlock unlimited historical place analysis',
+                    showUsageStats: true
+                };
+            default: // upgrade
+                return {
+                    title: 'Premium Access',
+                    subtitle: 'Unlock unlimited historical place analysis',
+                    showUsageStats: true
+                };
+        }
+    };
+
+    const content = getContent();
+    
+    // Debug logging
+    console.log('Paywall render - source:', source, 'selectedPlan:', selectedPlan, 'freeAnalysesEnabled:', freeAnalysesEnabled, 'freeTrialUsed:', freeTrialUsed);
+
     // If already premium, show special view
-    if (subscriptionStatus?.isPremium) {
+    if (subscriptionStatus?.isPremium && source !== 'onboarding') {
         return (
             <SafeAreaView style={styles.container}>
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
                         <Text style={styles.closeButtonText}>✕</Text>
                     </TouchableOpacity>
                 </View>
@@ -143,7 +205,10 @@ export default function PremiumScreen() {
                         You already have unlimited access to all features!
                     </Text>
                     
-                    <TouchableOpacity style={styles.continueButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.continueButton} onPress={() => {
+                        console.log('Paywall - Premium user continuing');
+                        router.replace('/');
+                    }}>
                         <Text style={styles.continueButtonText}>Continue Exploring</Text>
                     </TouchableOpacity>
                 </View>
@@ -158,12 +223,14 @@ export default function PremiumScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
-                        <Text style={styles.closeButtonText}>✕</Text>
-                    </TouchableOpacity>
-                </View>
+                {/* Header - Only show close button if not onboarding */}
+                {source !== 'onboarding' && (
+                    <View style={styles.header}>
+                        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                            <Text style={styles.closeButtonText}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
 
                 {/* Main Content */}
                 <View style={styles.content}>
@@ -175,10 +242,8 @@ export default function PremiumScreen() {
                     </View>
 
                     {/* Title */}
-                    <Text style={styles.title}>Premium Access</Text>
-                    <Text style={styles.subtitle}>
-                        Unlock unlimited historical place analysis
-                    </Text>
+                    <Text style={styles.title}>{content.title}</Text>
+                    <Text style={styles.subtitle}>{content.subtitle}</Text>
 
                     {/* Features */}
                     <View style={styles.featuresSection}>
@@ -187,21 +252,13 @@ export default function PremiumScreen() {
                             <Text style={styles.featureText}>Identify unlimited historical places</Text>
                         </View>
                         <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>📚</Text>
-                            <Text style={styles.featureText}>Unlock educational facts</Text>
-                        </View>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>✨</Text>
-                            <Text style={styles.featureText}>Use the latest AI models</Text>
-                        </View>
-                        <View style={styles.featureItem}>
                             <Text style={styles.featureIcon}>🔓</Text>
                             <Text style={styles.featureText}>Remove annoying paywalls</Text>
                         </View>
                     </View>
 
                     {/* Usage Stats */}
-                    {usageStats && (
+                    {content.showUsageStats && usageStats && (
                         <View style={styles.usageSection}>
                             <Text style={styles.sectionTitle}>Your Current Usage</Text>
                             <View style={styles.usageStats}>
@@ -266,22 +323,24 @@ export default function PremiumScreen() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Free Analyses Toggle */}
-                    <View style={styles.toggleSection}>
-                        <View style={styles.toggleRow}>
-                            <Text style={styles.toggleText}>3 Free Analyses Enabled</Text>
-                            <Switch
-                                value={freeAnalysesEnabled}
-                                onValueChange={handleToggleChange}
-                                trackColor={{ false: '#E5E5E5', true: '#4CAF50' }}
-                                thumbColor='#FFFFFF'
-                                disabled={selectedPlan === 'lifetime'}
-                            />
+                    {/* Free Analyses Toggle - Show only if free trial hasn't been used */}
+                    {!freeTrialUsed && (
+                        <View style={styles.toggleSection}>
+                            <View style={styles.toggleRow}>
+                                <Text style={styles.toggleText}>3 Free Analyses Enabled</Text>
+                                <Switch
+                                    value={freeAnalysesEnabled}
+                                    onValueChange={handleToggleChange}
+                                    trackColor={{ false: '#E5E5E5', true: '#4CAF50' }}
+                                    thumbColor='#FFFFFF'
+                                    disabled={selectedPlan === 'lifetime'}
+                                />
+                            </View>
+                            {freeAnalysesEnabled && (
+                                <Text style={styles.noPaymentText}>NO PAYMENT REQUIRED TODAY</Text>
+                            )}
                         </View>
-                        {freeAnalysesEnabled && (
-                            <Text style={styles.noPaymentText}>NO PAYMENT REQUIRED TODAY</Text>
-                        )}
-                    </View>
+                    )}
 
                     {/* Action Buttons */}
                     <View style={styles.actionsSection}>
@@ -304,15 +363,15 @@ export default function PremiumScreen() {
                             )}
                         </TouchableOpacity>
 
-                        {/* Free Analyses Button */}
-                        {freeAnalysesEnabled && usageStats?.remainingFreeAnalyses === 0 && (
+                        {/* Free Analyses Button - Show when toggle is enabled and free trial hasn't been used */}
+                        {freeAnalysesEnabled && !freeTrialUsed && (
                             <TouchableOpacity
                                 style={styles.freeButton}
                                 onPress={startFreeAnalyses}
                                 activeOpacity={0.8}
                             >
                                 <Text style={styles.freeButtonText}>
-                                    Get 3 More Free Analyses
+                                    {source === 'onboarding' ? 'Start with 3 Free Analyses' : 'Get 3 More Free Analyses'}
                                 </Text>
                             </TouchableOpacity>
                         )}
@@ -321,7 +380,8 @@ export default function PremiumScreen() {
                     {/* Terms */}
                     <View style={styles.termsSection}>
                         <Text style={styles.termsText}>
-                            Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period.
+                            By continuing, you agree to our Terms of Service and Privacy Policy.
+                            {selectedPlan === 'weekly' && ' Subscription automatically renews unless cancelled.'}
                         </Text>
                     </View>
                 </View>
