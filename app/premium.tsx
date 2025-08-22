@@ -1,68 +1,63 @@
-// app/premium.tsx - Fixed TypeScript Errors
-import React, { useState, useEffect } from 'react';
+// app/premium.tsx - Stable Version
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-    View,
-    Text,
-    TouchableOpacity,
-    StyleSheet,
-    SafeAreaView,
-    ScrollView,
     ActivityIndicator,
     Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { checkSubscriptionStatus } from '../services/subscriptionService';
 import { getUsageStats, setPremiumStatus } from '../services/usageService';
-import { UsageStats, SubscriptionPlan } from '../types';
+import { SubscriptionStatus, UsageStats } from '../types';
 
 export default function PremiumScreen() {
     const [loading, setLoading] = useState<boolean>(false);
-    const [restoring, setRestoring] = useState<boolean>(false);
-    const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
     const [selectedPlan, setSelectedPlan] = useState<string>('weekly');
-
-    const subscriptionPlans: SubscriptionPlan[] = [
-
-        {
-            id: 'yearly',
-            title: 'Yearly Premium',
-            price: '$49.99',
-            period: 'per year',
-            savings: 'Save 68%',
-            popular: true,
-            features: [
-                'Everything in Weekly',
-                'Unlimited historical analysis',
-                'Best value - 35 weeks free',
-                'Early access to new features',
-                'Advanced saving features',
-                'Export the information as PDF'
-            ]
-        },
-        {
-
-            id: 'weekly',
-            title: 'Weekly Premium',
-            price: '$2.99',
-            period: 'per week',
-            features: [
-                'Unlimited historical analysis',
-                'Advanced saving features',
-                'Early access to new features',
-                'Export the information as PDF'
-            ]
-        }
-    ];
+    const [freeAnalysesEnabled, setFreeAnalysesEnabled] = useState<boolean>(true);
+    const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+    const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
 
     useEffect(() => {
-        loadUsageStats();
+        loadData();
     }, []);
 
-    const loadUsageStats = async (): Promise<void> => {
+    const loadData = async (): Promise<void> => {
         try {
             const stats = await getUsageStats();
             setUsageStats(stats);
+            
+            const subStatus = await checkSubscriptionStatus();
+            setSubscriptionStatus(subStatus as SubscriptionStatus);
         } catch (error) {
-            console.error('Error loading usage stats:', error);
+            console.error('Error loading premium screen data:', error);
+        }
+    };
+
+    const handlePlanChange = (planId: string) => {
+        console.log('Premium - Plan changed to:', planId);
+        setSelectedPlan(planId);
+        
+        // Lifetime seçilince free analyses toggle kapatılır
+        if (planId === 'lifetime') {
+            setFreeAnalysesEnabled(false);
+        } else if (planId === 'weekly') {
+            setFreeAnalysesEnabled(true);
+        }
+    };
+
+    const handleToggleChange = (value: boolean) => {
+        console.log('Premium - Toggle changed to:', value);
+        setFreeAnalysesEnabled(value);
+        
+        // Toggle açılınca weekly seçilir
+        if (value && selectedPlan === 'lifetime') {
+            setSelectedPlan('weekly');
         }
     };
 
@@ -70,13 +65,12 @@ export default function PremiumScreen() {
         setLoading(true);
 
         try {
-            // TODO: RevenueCat integration will go here
-            console.log('Attempting to purchase:', planId);
+            console.log('Premium - Attempting to purchase:', planId);
 
             // Simulate purchase process
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            // For now, just grant premium access (temporary)
+            // Grant premium access
             await setPremiumStatus(true);
 
             Alert.alert(
@@ -91,7 +85,7 @@ export default function PremiumScreen() {
             );
 
         } catch (error) {
-            console.error('Purchase error:', error);
+            console.error('Premium - Purchase error:', error);
             Alert.alert(
                 'Purchase Failed',
                 'There was an issue processing your purchase. Please try again.',
@@ -102,197 +96,233 @@ export default function PremiumScreen() {
         }
     };
 
-    const handleRestorePurchases = async (): Promise<void> => {
-        setRestoring(true);
-
+    const startFreeAnalyses = async () => {
         try {
-            // TODO: RevenueCat restore purchases will go here
-            console.log('Restoring purchases...');
+            console.log('Premium - Starting free analyses...');
 
-            // Simulate restore process
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+            await AsyncStorage.setItem('free_trial_active', 'true');
+            console.log('Premium - Free analyses session set');
 
             Alert.alert(
-                'Restore Complete',
-                'No previous purchases found.',
-                [{ text: 'OK' }]
+                'Free Analyses Started! 🎁',
+                'You now have 3 free analyses to try our premium features.',
+                [
+                    {
+                        text: 'Start Exploring',
+                        onPress: () => router.back()
+                    }
+                ]
             );
 
         } catch (error) {
-            console.error('Restore error:', error);
-            Alert.alert(
-                'Restore Failed',
-                'Could not restore purchases. Please try again.',
-                [{ text: 'OK' }]
-            );
-        } finally {
-            setRestoring(false);
+            console.error('Premium - Error starting free analyses:', error);
+            Alert.alert('Error', 'Something went wrong. Please try again.');
         }
     };
 
-    const renderSubscriptionPlan = (plan: SubscriptionPlan) => (
-        <TouchableOpacity
-            key={plan.id}
-            style={[
-                styles.planCard,
-                selectedPlan === plan.id && styles.selectedPlan,
-                plan.popular && styles.popularPlan
-            ]}
-            onPress={() => setSelectedPlan(plan.id)}
-        >
-            {plan.popular && (
-                <View style={styles.popularBadge}>
-                    <Text style={styles.popularBadgeText}>MOST POPULAR</Text>
+    // If already premium, show special view
+    if (subscriptionStatus?.isPremium) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+                        <Text style={styles.closeButtonText}>✕</Text>
+                    </TouchableOpacity>
                 </View>
-            )}
-
-            <View style={styles.planHeader}>
-                <Text style={styles.planTitle}>{plan.title}</Text>
-                {plan.savings && (
-                    <Text style={styles.savingsText}>{plan.savings}</Text>
-                )}
-            </View>
-
-            <View style={styles.priceContainer}>
-                {plan.id === 'yearly' ? (
-                    <View>
-                        <Text style={styles.originalPriceText}>$155.48</Text>
-                        <Text style={styles.priceText}>{plan.price}</Text>
+                
+                <View style={styles.premiumActiveContainer}>
+                    <View style={styles.iconContainer}>
+                        <View style={styles.iconBackground}>
+                            <Text style={styles.logoEmoji}>🏛️</Text>
+                        </View>
                     </View>
-                ) : (
-                    <Text style={styles.priceText}>{plan.price}</Text>
-                )}
-                <Text style={styles.periodText}>{plan.period}</Text>
-            </View>
-
-            <View style={styles.featuresContainer}>
-                {plan.features.map((feature, index) => (
-                    <View key={index} style={styles.featureItem}>
-                        <Text style={styles.checkmark}>✓</Text>
-                        <Text style={styles.featureText}>{feature}</Text>
-                    </View>
-                ))}
-            </View>
-
-            {selectedPlan === plan.id && (
-                <View style={styles.selectedIndicator}>
-                    <Text style={styles.selectedText}>Selected</Text>
+                    
+                    <Text style={styles.premiumActiveTitle}>✨ Premium Active</Text>
+                    <Text style={styles.premiumActiveText}>
+                        You already have unlimited access to all features!
+                    </Text>
+                    
+                    <TouchableOpacity style={styles.continueButton} onPress={() => router.back()}>
+                        <Text style={styles.continueButtonText}>Continue Exploring</Text>
+                    </TouchableOpacity>
                 </View>
-            )}
-        </TouchableOpacity>
-    );
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+                style={styles.scrollView} 
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity
-                        style={styles.closeButton}
-                        onPress={() => router.back()}
-                    >
+                    <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
                         <Text style={styles.closeButtonText}>✕</Text>
                     </TouchableOpacity>
                 </View>
 
-                {/* Hero Section */}
-                <View style={styles.heroSection}>
-                    <Text style={styles.heroIcon}>🏛️</Text>
-                    <Text style={styles.heroTitle}>Unlock Unlimited History</Text>
-                    <Text style={styles.heroSubtitle}>
-                        Discover countless historical places with unlimited AI-powered analysis
+                {/* Main Content */}
+                <View style={styles.content}>
+                    {/* App Icon */}
+                    <View style={styles.iconContainer}>
+                        <View style={styles.iconBackground}>
+                            <Text style={styles.logoEmoji}>🏛️</Text>
+                        </View>
+                    </View>
+
+                    {/* Title */}
+                    <Text style={styles.title}>Premium Access</Text>
+                    <Text style={styles.subtitle}>
+                        Unlock unlimited historical place analysis
                     </Text>
-                </View>
 
-                {/* Usage Stats */}
-                {usageStats && (
-                    <View style={styles.statsContainer}>
-                        <Text style={styles.statsTitle}>Your Usage</Text>
-                        <View style={styles.statsRow}>
-                            <View style={styles.statItem}>
-                                <Text style={styles.statNumber}>{usageStats.totalAnalyses}</Text>
-                                <Text style={styles.statLabel}>Analyses Done</Text>
+                    {/* Features */}
+                    <View style={styles.featuresSection}>
+                        <View style={styles.featureItem}>
+                            <Text style={styles.featureIcon}>🏛️</Text>
+                            <Text style={styles.featureText}>Identify unlimited historical places</Text>
+                        </View>
+                        <View style={styles.featureItem}>
+                            <Text style={styles.featureIcon}>📚</Text>
+                            <Text style={styles.featureText}>Unlock educational facts</Text>
+                        </View>
+                        <View style={styles.featureItem}>
+                            <Text style={styles.featureIcon}>✨</Text>
+                            <Text style={styles.featureText}>Use the latest AI models</Text>
+                        </View>
+                        <View style={styles.featureItem}>
+                            <Text style={styles.featureIcon}>🔓</Text>
+                            <Text style={styles.featureText}>Remove annoying paywalls</Text>
+                        </View>
+                    </View>
+
+                    {/* Usage Stats */}
+                    {usageStats && (
+                        <View style={styles.usageSection}>
+                            <Text style={styles.sectionTitle}>Your Current Usage</Text>
+                            <View style={styles.usageStats}>
+                                <View style={styles.usageStat}>
+                                    <Text style={styles.usageNumber}>{usageStats.totalAnalyses}</Text>
+                                    <Text style={styles.usageLabel}>Analyses Used</Text>
+                                </View>
+                                <View style={styles.usageStat}>
+                                    <Text style={styles.usageNumber}>{usageStats.remainingFreeAnalyses}</Text>
+                                    <Text style={styles.usageLabel}>Remaining</Text>
+                                </View>
                             </View>
-                            <View style={styles.statItem}>
-                                <Text style={styles.statNumber}>{usageStats.remainingFreeAnalyses}</Text>
-                                <Text style={styles.statLabel}>Free Remaining</Text>
+                        </View>
+                    )}
+
+                    {/* Pricing Plans */}
+                    <View style={styles.pricingSection}>
+                        <Text style={styles.sectionTitle}>Choose Your Plan</Text>
+                        
+                        {/* Lifetime Plan */}
+                        <TouchableOpacity
+                            style={[
+                                styles.planCard,
+                                selectedPlan === 'lifetime' && styles.selectedPlanCard
+                            ]}
+                            onPress={() => handlePlanChange('lifetime')}
+                            activeOpacity={0.7}
+                        >
+                            {selectedPlan === 'lifetime' && (
+                                <View style={styles.selectedIndicator}>
+                                    <Text style={styles.checkmark}>✓</Text>
+                                </View>
+                            )}
+                            <View style={styles.bestValueBadge}>
+                                <Text style={styles.bestValueText}>BEST VALUE</Text>
                             </View>
-                        </View>
+                            <Text style={styles.planTitle}>Lifetime Plan</Text>
+                            <Text style={styles.planPrice}>$29.99</Text>
+                            <Text style={styles.planSubtext}>One-time payment</Text>
+                        </TouchableOpacity>
+
+                        {/* Weekly Plan */}
+                        <TouchableOpacity
+                            style={[
+                                styles.planCard,
+                                selectedPlan === 'weekly' && styles.selectedPlanCard
+                            ]}
+                            onPress={() => handlePlanChange('weekly')}
+                            activeOpacity={0.7}
+                        >
+                            {selectedPlan === 'weekly' && (
+                                <View style={styles.selectedIndicator}>
+                                    <Text style={styles.checkmark}>✓</Text>
+                                </View>
+                            )}
+                            <View style={styles.shortTermBadge}>
+                                <Text style={styles.shortTermText}>Short Term ✓</Text>
+                            </View>
+                            <Text style={styles.planTitle}>Weekly Plan</Text>
+                            <Text style={styles.planPrice}>$5.99</Text>
+                            <Text style={styles.planSubtext}>per week</Text>
+                        </TouchableOpacity>
                     </View>
-                )}
 
-                {/* Benefits Section */}
-                <View style={styles.benefitsSection}>
-                    <Text style={styles.benefitsTitle}>Why Go Premium?</Text>
-
-                    <View style={styles.benefitItem}>
-                        <Text style={styles.benefitIcon}>∞</Text>
-                        <View style={styles.benefitContent}>
-                            <Text style={styles.benefitTitle}>Unlimited Analysis</Text>
-                            <Text style={styles.benefitDescription}>
-                                Analyze as many historical places as you want, whenever you want
-                            </Text>
+                    {/* Free Analyses Toggle */}
+                    <View style={styles.toggleSection}>
+                        <View style={styles.toggleRow}>
+                            <Text style={styles.toggleText}>3 Free Analyses Enabled</Text>
+                            <Switch
+                                value={freeAnalysesEnabled}
+                                onValueChange={handleToggleChange}
+                                trackColor={{ false: '#E5E5E5', true: '#4CAF50' }}
+                                thumbColor='#FFFFFF'
+                                disabled={selectedPlan === 'lifetime'}
+                            />
                         </View>
-                    </View>
-
-
-                    <View style={styles.benefitItem}>
-                        <Text style={styles.benefitIcon}>💾</Text>
-                        <View style={styles.benefitContent}>
-                            <Text style={styles.benefitTitle}>Advanced Features</Text>
-                            <Text style={styles.benefitDescription}>
-                                Export to PDF, advanced search, and exclusive content
-                            </Text>
-                        </View>
-                    </View>
-                </View>
-
-                {/* Subscription Plans */}
-                <View style={styles.plansSection}>
-                    <Text style={styles.plansTitle}>Choose Your Plan</Text>
-                    {subscriptionPlans.map(renderSubscriptionPlan)}
-                </View>
-
-                {/* Purchase Button */}
-                <View style={styles.purchaseSection}>
-                    <TouchableOpacity
-                        style={[styles.purchaseButton, loading && styles.purchaseButtonDisabled]}
-                        onPress={() => handlePurchase(selectedPlan)}
-                        disabled={loading}
-                    >
-                        {loading ? (
-                            <ActivityIndicator size="small" color="white" />
-                        ) : (
-                            <Text style={styles.purchaseButtonText}>
-                                Start Premium - {subscriptionPlans.find(p => p.id === selectedPlan)?.price}
-                            </Text>
+                        {freeAnalysesEnabled && (
+                            <Text style={styles.noPaymentText}>NO PAYMENT REQUIRED TODAY</Text>
                         )}
-                    </TouchableOpacity>
+                    </View>
 
-                    <TouchableOpacity
-                        style={styles.restoreButton}
-                        onPress={handleRestorePurchases}
-                        disabled={restoring}
-                    >
-                        <Text style={styles.restoreButtonText}>
-                            {restoring ? 'Restoring...' : 'Restore Purchases'}
+                    {/* Action Buttons */}
+                    <View style={styles.actionsSection}>
+                        {/* Premium Button */}
+                        <TouchableOpacity
+                            style={[styles.premiumButton, loading && styles.premiumButtonDisabled]}
+                            onPress={() => handlePurchase(selectedPlan)}
+                            disabled={loading}
+                            activeOpacity={0.8}
+                        >
+                            {loading ? (
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                            ) : (
+                                <>
+                                    <Text style={styles.premiumButtonText}>
+                                        {selectedPlan === 'lifetime' ? 'Get Lifetime Access' : 'Start Premium Weekly'}
+                                    </Text>
+                                    <Text style={styles.buttonArrow}>→</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+
+                        {/* Free Analyses Button */}
+                        {freeAnalysesEnabled && usageStats?.remainingFreeAnalyses === 0 && (
+                            <TouchableOpacity
+                                style={styles.freeButton}
+                                onPress={startFreeAnalyses}
+                                activeOpacity={0.8}
+                            >
+                                <Text style={styles.freeButtonText}>
+                                    Get 3 More Free Analyses
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
+                    {/* Terms */}
+                    <View style={styles.termsSection}>
+                        <Text style={styles.termsText}>
+                            Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period.
                         </Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Terms */}
-                <View style={styles.termsSection}>
-                    <Text style={styles.termsText}>
-                        Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period.
-                    </Text>
-                    <View style={styles.termsLinks}>
-                        <TouchableOpacity>
-                            <Text style={styles.termsLink}>Terms of Service</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.termsSeparator}> • </Text>
-                        <TouchableOpacity>
-                            <Text style={styles.termsLink}>Privacy Policy</Text>
-                        </TouchableOpacity>
                     </View>
                 </View>
             </ScrollView>
@@ -303,11 +333,16 @@ export default function PremiumScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#f8f9fa',
+        backgroundColor: '#F8F9FA',
     },
     scrollView: {
         flex: 1,
     },
+    scrollContent: {
+        paddingBottom: 40,
+    },
+    
+    // Header
     header: {
         flexDirection: 'row',
         justifyContent: 'flex-end',
@@ -317,7 +352,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 16,
-        backgroundColor: '#e0e0e0',
+        backgroundColor: '#E0E0E0',
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -325,266 +360,303 @@ const styles = StyleSheet.create({
         fontSize: 18,
         color: '#666',
     },
-    heroSection: {
-        alignItems: 'center',
+    
+    // Content
+    content: {
         paddingHorizontal: 20,
-        paddingBottom: 30,
+        alignItems: 'center',
     },
-    heroIcon: {
-        fontSize: 64,
+    iconContainer: {
         marginBottom: 20,
     },
-    heroTitle: {
+    iconBackground: {
+        width: 100,
+        height: 100,
+        borderRadius: 25,
+        backgroundColor: '#4A90E2',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    logoEmoji: {
+        fontSize: 40,
+        color: '#FFFFFF',
+    },
+    title: {
         fontSize: 28,
-        fontWeight: 'bold',
-        color: '#333',
+        fontWeight: '700',
+        color: '#1F1F1F',
+        marginBottom: 8,
         textAlign: 'center',
-        marginBottom: 10,
     },
-    heroSubtitle: {
+    subtitle: {
         fontSize: 16,
-        color: '#666',
+        color: '#666666',
         textAlign: 'center',
-        lineHeight: 24,
-    },
-    statsContainer: {
-        backgroundColor: 'white',
-        marginHorizontal: 20,
         marginBottom: 30,
-        borderRadius: 12,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
+        lineHeight: 22,
     },
-    statsTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 15,
-        textAlign: 'center',
-    },
-    statsRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-    },
-    statItem: {
-        alignItems: 'center',
-    },
-    statNumber: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: '#4A90E2',
-    },
-    statLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginTop: 4,
-    },
-    benefitsSection: {
-        paddingHorizontal: 20,
-        marginBottom: 30,
-    },
-    benefitsTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 20,
-        textAlign: 'center',
-    },
-    benefitItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'white',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    benefitIcon: {
-        fontSize: 32,
-        marginRight: 16,
-    },
-    benefitContent: {
+
+    // Premium Active State
+    premiumActiveContainer: {
         flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 40,
     },
-    benefitTitle: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#333',
-        marginBottom: 4,
-    },
-    benefitDescription: {
-        fontSize: 14,
-        color: '#666',
-        lineHeight: 20,
-    },
-    plansSection: {
-        paddingHorizontal: 20,
-        marginBottom: 30,
-    },
-    plansTitle: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#333',
-        marginBottom: 20,
+    premiumActiveTitle: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#2E7D32',
+        marginBottom: 16,
         textAlign: 'center',
     },
-    planCard: {
-        backgroundColor: 'white',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 16,
-        borderWidth: 2,
-        borderColor: '#e0e0e0',
-        position: 'relative',
-    },
-    selectedPlan: {
-        borderColor: '#4A90E2',
-        backgroundColor: '#f0f8ff',
-    },
-    popularPlan: {
-        borderColor: '#FF6B6B',
-    },
-    popularBadge: {
-        position: 'absolute',
-        top: -12,
-        left: 20,
-        backgroundColor: '#FF6B6B',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 12,
-    },
-    popularBadgeText: {
-        color: 'white',
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    planHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    planTitle: {
+    premiumActiveText: {
         fontSize: 18,
-        fontWeight: 'bold',
-        color: '#333',
+        color: '#2E7D32',
+        textAlign: 'center',
+        marginBottom: 40,
+        lineHeight: 26,
     },
-    savingsText: {
-        color: '#FF6B6B',
-        fontSize: 14,
+    continueButton: {
+        backgroundColor: '#4CAF50',
+        borderRadius: 14,
+        paddingVertical: 16,
+        paddingHorizontal: 32,
+    },
+    continueButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
         fontWeight: '600',
     },
-    priceContainer: {
-        marginBottom: 16,
-    },
 
-    originalPriceText: {
-    fontSize: 20,
-    fontWeight: '500',
-    color: '#999',
-    textDecorationLine: 'line-through',
-    marginBottom: 4,
-    },
-
-    priceText: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#4A90E2',
-    },
-    periodText: {
-        fontSize: 16,
-        color: '#666',
-        marginTop: 4,
-    },
-    featuresContainer: {
-        marginBottom: 16,
+    // Features
+    featuresSection: {
+        width: '100%',
+        marginBottom: 25,
     },
     featureItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
+        paddingVertical: 8,
     },
-    checkmark: {
-        color: '#50C878',
-        fontSize: 16,
-        fontWeight: 'bold',
-        marginRight: 8,
-        width: 20,
+    featureIcon: {
+        fontSize: 18,
+        marginRight: 12,
+        width: 24,
     },
     featureText: {
-        fontSize: 14,
-        color: '#555',
+        fontSize: 15,
+        color: '#333333',
+        fontWeight: '500',
         flex: 1,
     },
-    selectedIndicator: {
-        backgroundColor: '#4A90E2',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 20,
-        alignSelf: 'center',
+
+    // Usage Stats
+    usageSection: {
+        width: '100%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 25,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
     },
-    selectedText: {
-        color: 'white',
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    purchaseSection: {
-        paddingHorizontal: 20,
-        marginBottom: 30,
-    },
-    purchaseButton: {
-        backgroundColor: '#4A90E2',
-        borderRadius: 12,
-        padding: 16,
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    purchaseButtonDisabled: {
-        backgroundColor: '#999',
-    },
-    purchaseButtonText: {
-        color: 'white',
+    sectionTitle: {
         fontSize: 18,
         fontWeight: '600',
+        color: '#1F1F1F',
+        textAlign: 'center',
+        marginBottom: 16,
     },
-    restoreButton: {
+    usageStats: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+    },
+    usageStat: {
         alignItems: 'center',
-        padding: 12,
     },
-    restoreButtonText: {
-        color: '#666',
+    usageNumber: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#FF5252',
+        marginBottom: 4,
+    },
+    usageLabel: {
+        fontSize: 14,
+        color: '#666666',
+    },
+
+    // Pricing
+    pricingSection: {
+        width: '100%',
+        marginBottom: 25,
+    },
+    planCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 12,
+        borderWidth: 2,
+        borderColor: '#E5E5E5',
+        position: 'relative',
+    },
+    selectedPlanCard: {
+        borderColor: '#4A90E2',
+        backgroundColor: '#F0F8FF',
+    },
+    selectedIndicator: {
+        position: 'absolute',
+        top: 12,
+        left: 12,
+        width: 20,
+        height: 20,
+        borderRadius: 10,
+        backgroundColor: '#4A90E2',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    checkmark: {
+        color: '#FFFFFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    bestValueBadge: {
+        position: 'absolute',
+        top: -8,
+        right: 15,
+        backgroundColor: '#FF5252',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 10,
+    },
+    bestValueText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '700',
+    },
+    shortTermBadge: {
+        position: 'absolute',
+        top: 12,
+        right: 12,
+        backgroundColor: '#4CAF50',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
+    },
+    shortTermText: {
+        color: '#FFFFFF',
+        fontSize: 10,
+        fontWeight: '600',
+    },
+    planTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#1F1F1F',
+        marginBottom: 4,
+    },
+    planPrice: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#1F1F1F',
+        marginBottom: 2,
+    },
+    planSubtext: {
+        fontSize: 14,
+        color: '#666666',
+    },
+
+    // Toggle
+    toggleSection: {
+        width: '100%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 25,
+        borderWidth: 1,
+        borderColor: '#E5E5E5',
+    },
+    toggleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    toggleText: {
         fontSize: 16,
+        fontWeight: '600',
+        color: '#1F1F1F',
     },
-    termsSection: {
-        paddingHorizontal: 20,
-        paddingBottom: 30,
+    noPaymentText: {
+        fontSize: 12,
+        color: '#666666',
+        fontWeight: '600',
+        textAlign: 'center',
+        letterSpacing: 0.5,
+    },
+
+    // Actions
+    actionsSection: {
+        width: '100%',
+        marginBottom: 30,
+    },
+    premiumButton: {
+        backgroundColor: '#4A90E2',
+        borderRadius: 14,
+        padding: 18,
+        marginBottom: 12,
+        flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#4A90E2',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    premiumButtonDisabled: {
+        backgroundColor: '#999999',
+        shadowOpacity: 0,
+        elevation: 0,
+    },
+    premiumButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+        marginRight: 8,
+    },
+    buttonArrow: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    freeButton: {
+        backgroundColor: 'transparent',
+        borderWidth: 2,
+        borderColor: '#4A90E2',
+        borderRadius: 14,
+        padding: 16,
+        alignItems: 'center',
+    },
+    freeButtonText: {
+        color: '#4A90E2',
+        fontSize: 16,
+        fontWeight: '600',
+    },
+
+    // Terms
+    termsSection: {
+        width: '100%',
+        paddingHorizontal: 10,
     },
     termsText: {
         fontSize: 12,
-        color: '#999',
+        color: '#999999',
         textAlign: 'center',
         lineHeight: 18,
-        marginBottom: 12,
-    },
-    termsLinks: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    termsLink: {
-        fontSize: 12,
-        color: '#4A90E2',
-    },
-    termsSeparator: {
-        fontSize: 12,
-        color: '#999',
     },
 });

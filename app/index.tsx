@@ -1,28 +1,24 @@
-// app/index.tsx - Self-Managing with Onboarding Check
-import React, { useState, useRef, useEffect, JSX } from 'react';
+// app/index.tsx - Updated with New Pricing Logic
+import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
+import React, { JSX, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Image,
-  Modal,
   Animated,
   Dimensions,
-  StatusBar,
-  Platform,
+  Modal,
+  SafeAreaView,
   ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { router } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
 import { getCurrentLanguage, getUITexts } from '../services/languageService';
-import { getUsageStats } from '../services/usageService';
 import { checkSubscriptionStatus } from '../services/subscriptionService';
-import { isPremiumUser } from '../services/usageService';
-import { UsageStats, SubscriptionStatus } from '../types';
+import { getUsageStats, isPremiumUser } from '../services/usageService';
+import { SubscriptionStatus, UsageStats } from '../types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -32,8 +28,54 @@ export default function HomeScreen() {
   const [uiTexts, setUITexts] = useState(getUITexts('en'));
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+  const [trialInfo, setTrialInfo] = useState<any>(null);
   const slideAnim = useRef(new Animated.Value(-280)).current;
   const insets = useSafeAreaInsets();
+
+  // Helper function to check trial status
+  const checkTrialStatus = async () => {
+    try {
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      
+      const trialActive = await AsyncStorage.getItem('trial_active');
+      const trialEndDate = await AsyncStorage.getItem('trial_end_date');
+      
+      if (trialActive === 'true' && trialEndDate) {
+        const endDate = new Date(trialEndDate);
+        const now = new Date();
+        
+        if (now < endDate) {
+          return {
+            isActive: true,
+            endDate: trialEndDate,
+            daysRemaining: Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          };
+        } else {
+          // Trial expired
+          await AsyncStorage.setItem('trial_active', 'false');
+          return {
+            isActive: false,
+            endDate: trialEndDate,
+            daysRemaining: 0
+          };
+        }
+      }
+      
+      return {
+        isActive: false,
+        endDate: null,
+        daysRemaining: 0
+      };
+      
+    } catch (error) {
+      console.error('Error checking trial status:', error);
+      return {
+        isActive: false,
+        endDate: null,
+        daysRemaining: 0
+      };
+    }
+  };
 
   // Check if should redirect to onboarding
   useFocusEffect(
@@ -46,22 +88,29 @@ export default function HomeScreen() {
           const isPremium = await isPremiumUser();
           console.log('🏠 Index screen - Premium status:', isPremium);
           
+          // Check trial status
+          const trial = await checkTrialStatus();
+          console.log('🏠 Index screen - Trial status:', trial);
+          
           // Check if free trial is active for this session
           const freeTrialActive = await AsyncStorage.getItem('free_trial_active');
           console.log('🏠 Index screen - Free trial active:', freeTrialActive);
           
-          if (!isPremium && freeTrialActive !== 'true') {
-            console.log('🎯 User not premium and no free trial, redirecting to onboarding');
+          // Allow access if: premium, trial active, or free trial session active
+          const hasAccess = isPremium || trial.isActive || freeTrialActive === 'true';
+          
+          if (!hasAccess) {
+            console.log('🎯 User needs access, redirecting to onboarding');
             router.replace('/onboarding');
             return;
           }
           
-          // If premium or free trial active, load normal data
+          // If has access, load normal data
           console.log('✅ User can access main app');
           loadAppData();
           
         } catch (error) {
-          console.error('❌ Error checking premium status:', error);
+          console.error('❌ Error checking access status:', error);
           // On error, load app normally
           loadAppData();
         }
@@ -86,7 +135,11 @@ export default function HomeScreen() {
       const subStatus = await checkSubscriptionStatus();
       setSubscriptionStatus(subStatus);
       
-      console.log('🏠 Home screen data loaded:', { language, stats, subStatus });
+      // Load trial info
+      const trial = await checkTrialStatus();
+      setTrialInfo(trial);
+      
+      console.log('🏠 Home screen data loaded:', { language, stats, subStatus, trial });
     } catch (error) {
       console.error('Error loading app data:', error);
     }
@@ -154,12 +207,27 @@ export default function HomeScreen() {
   };
 
   const renderPremiumBanner = (): JSX.Element | null => {
-    // Check both subscription status and usage stats for premium
+    // Check if user is premium
     if (subscriptionStatus?.isPremium || usageStats?.isPremium) {
+      const planType = subscriptionStatus?.planType || 'premium';
       return (
         <View style={styles.premiumActiveBanner}>
-          <Text style={styles.premiumActiveText}>✨ Premium Active</Text>
+          <Text style={styles.premiumActiveText}>
+            ✨ {planType === 'lifetime' ? 'Lifetime Premium' : 'Premium Active'}
+          </Text>
           <Text style={styles.premiumActiveSubtext}>Unlimited analyses</Text>
+        </View>
+      );
+    }
+
+    // Check if trial is active
+    if (trialInfo?.isActive) {
+      return (
+        <View style={styles.trialBanner}>
+          <Text style={styles.trialBannerText}>🎁 Free Trial Active</Text>
+          <Text style={styles.trialBannerSubtext}>
+            {trialInfo.daysRemaining} day{trialInfo.daysRemaining !== 1 ? 's' : ''} remaining
+          </Text>
         </View>
       );
     }
@@ -172,16 +240,16 @@ export default function HomeScreen() {
           style={styles.upgradeBanner}
           onPress={navigateToPremium}
         >
-          <Text style={styles.upgradeBannerText}>📸 No free analyses left</Text>
+          <Text style={styles.upgradeBannerText}>🔒 No free analyses left</Text>
           <Text style={styles.upgradeBannerSubtext}>Tap to upgrade to Premium</Text>
         </TouchableOpacity>
       );
     }
 
-    if (remaining === 1) {
+    if (remaining <= 1) {
       return (
         <View style={styles.warningBanner}>
-          <Text style={styles.warningBannerText}>⚡ 1 free analysis left</Text>
+          <Text style={styles.warningBannerText}>⚡ {remaining} free analysis left</Text>
           <TouchableOpacity 
             style={styles.miniUpgradeButton}
             onPress={navigateToPremium}
@@ -198,9 +266,26 @@ export default function HomeScreen() {
   const renderUsageIndicator = (): JSX.Element => {
     // First check subscription status, then usage stats
     if (subscriptionStatus?.isPremium || usageStats?.isPremium) {
+      const planType = subscriptionStatus?.planType || 'premium';
       return (
         <View style={styles.usageIndicator}>
-          <Text style={styles.usageText}>∞ Unlimited Access</Text>
+          <Text style={styles.usageText}>
+            ∞ {planType === 'lifetime' ? 'Lifetime Access' : 'Unlimited Access'}
+          </Text>
+        </View>
+      );
+    }
+
+    // Check if trial is active
+    if (trialInfo?.isActive) {
+      return (
+        <View style={styles.usageIndicator}>
+          <Text style={styles.usageText}>🎁 Free Trial Active</Text>
+          <View style={styles.trialProgress}>
+            <Text style={styles.trialProgressText}>
+              {trialInfo.daysRemaining} day{trialInfo.daysRemaining !== 1 ? 's' : ''} remaining
+            </Text>
+          </View>
         </View>
       );
     }
@@ -337,7 +422,13 @@ export default function HomeScreen() {
                 {/* Premium Status in Menu */}
                 <View style={styles.menuPremiumStatus}>
                   {subscriptionStatus?.isPremium ? (
-                    <Text style={styles.menuPremiumActiveText}>✨ Premium Member</Text>
+                    <Text style={styles.menuPremiumActiveText}>
+                      ✨ {subscriptionStatus.planType === 'lifetime' ? 'Lifetime' : 'Premium'} Member
+                    </Text>
+                  ) : trialInfo?.isActive ? (
+                    <Text style={styles.menuTrialActiveText}>
+                      🎁 Free Trial ({trialInfo.daysRemaining} days left)
+                    </Text>
                   ) : (
                     <TouchableOpacity 
                       style={styles.menuUpgradeButton}
@@ -426,6 +517,8 @@ const styles = StyleSheet.create({
   headerPlaceholder: {
     width: 30,
   },
+  
+  // Premium/Trial Banners
   premiumActiveBanner: {
     backgroundColor: '#4A90E2',
     paddingVertical: 12,
@@ -438,6 +531,22 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   premiumActiveSubtext: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  trialBanner: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  trialBannerText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  trialBannerSubtext: {
     color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
     marginTop: 2,
@@ -482,6 +591,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  
   content: {
     flex: 1,
   },
@@ -525,6 +635,8 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     paddingHorizontal: 20,
   },
+  
+  // Usage Indicator
   usageIndicator: {
     backgroundColor: 'white',
     borderRadius: 12,
@@ -543,6 +655,17 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 8,
   },
+  trialProgress: {
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  trialProgressText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
   progressBar: {
     flexDirection: 'row',
     gap: 8,
@@ -558,6 +681,7 @@ const styles = StyleSheet.create({
   progressDotRemaining: {
     backgroundColor: '#4A90E2',
   },
+  
   buttonContainer: {
     gap: 20,
     marginBottom: 40,
@@ -629,6 +753,8 @@ const styles = StyleSheet.create({
     color: '#555',
     fontWeight: '500',
   },
+  
+  // Modal and Menu styles (keeping existing styles)
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -691,6 +817,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#4A90E2',
+  },
+  menuTrialActiveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4CAF50',
   },
   menuUpgradeButton: {
     backgroundColor: '#FF6B6B',
