@@ -8,7 +8,7 @@ const REVENUECAT_API_KEY_ANDROID = 'goog_your_api_key_here';
 
 // Subscription product IDs (must match App Store Connect)
 export const SUBSCRIPTION_IDS = {
-  MONTHLY: 'monthly_premium',
+  WEEKLY: 'weekly_premium',
   YEARLY: 'yearly_premium',
 };
 
@@ -60,12 +60,12 @@ export const getSubscriptionPackages = async () => {
     // Return mock packages
     return [
       {
-        id: 'monthly',
-        title: 'Monthly Premium',
+        id: 'weekly',
+        title: 'Weekly Premium',
         description: 'Unlimited historical analysis',
-        price: '$4.99',
-        period: 'monthly',
-        originalPrice: 4.99,
+        price: '$2.99',
+        period: 'weekly',
+        originalPrice: 2.99,
       },
       {
         id: 'yearly',
