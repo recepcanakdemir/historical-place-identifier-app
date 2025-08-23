@@ -125,7 +125,6 @@ export const endFreeTrialSession = async (): Promise<boolean> => {
     return false;
   }
 };
-
 /**
  * Check if free trial session is active
  */

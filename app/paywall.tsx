@@ -319,7 +319,7 @@ export default function PaywallScreen() {
                             </View>
                             <Text style={styles.planTitle}>Weekly Plan</Text>
                             <Text style={styles.planPrice}>$5.99</Text>
-                            <Text style={styles.planSubtext}>per week</Text>
+                            <Text style={styles.planSubtext}>per week - auto renewable</Text>
                         </TouchableOpacity>
                     </View>
 

@@ -1,18 +1,18 @@
 // app/saved.tsx
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Image,
-  Alert,
-} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { getSavedPlaces, deleteSavedPlace } from '../services/storageService';
+import React, { useCallback, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { deleteSavedPlace, getSavedPlaces } from '../services/storageService';
 
 export default function SavedScreen() {
   const [savedPlaces, setSavedPlaces] = useState([]);

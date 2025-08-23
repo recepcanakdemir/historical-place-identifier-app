@@ -1,13 +1,15 @@
-// app/_layout.tsx - Updated Routes
+// app/_layout.tsx - Updated with Custom Splash Screen
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import SplashScreen from '../components/SplashScreen';
 import { endFreeTrialSession } from '../services/accessService';
 import { initializePurchases } from '../services/subscriptionService';
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
   
   useEffect(() => {
     const initializeApp = async () => {
@@ -34,6 +36,20 @@ export default function RootLayout() {
     initializeApp();
   }, []);
 
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
+  // Show custom splash screen first
+  if (showSplash) {
+    return (
+      <SafeAreaProvider>
+        <SplashScreen onLoadingComplete={handleSplashComplete} />
+      </SafeAreaProvider>
+    );
+  }
+
+  // Show loading if app is still initializing
   if (isLoading) {
     return (
       <SafeAreaProvider>
@@ -47,10 +63,10 @@ export default function RootLayout() {
           <Text style={{ 
             marginTop: 16, 
             fontSize: 16, 
-            color: '#666',
+            color: '#333',
             textAlign: 'center' 
           }}>
-            Starting Historical Places...
+            Finalizing setup...
           </Text>
         </View>
       </SafeAreaProvider>

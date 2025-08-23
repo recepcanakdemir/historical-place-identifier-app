@@ -1,18 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { Camera, CameraView } from 'expo-camera';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
+  Alert,
+  Animated,
   SafeAreaView,
   StatusBar,
-  Animated,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
   Vibration,
-  Alert,
+  View,
 } from 'react-native';
-import { CameraView, Camera } from 'expo-camera';
-import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 
 export default function CameraScreen() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
