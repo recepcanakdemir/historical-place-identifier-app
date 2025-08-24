@@ -122,7 +122,7 @@ export default function HomeScreen() {
       
       // Load subscription status
       const subStatus = await checkSubscriptionStatus();
-      setSubscriptionStatus(subStatus);
+      setSubscriptionStatus(subStatus as SubscriptionStatus | null);
       
       // Load trial info
       const trial = await checkTrialStatus();

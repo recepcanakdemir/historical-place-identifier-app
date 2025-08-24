@@ -1,4 +1,4 @@
-// app/paywall.tsx - Unified Paywall Screen
+// app/paywall.tsx - Fixed to work with existing subscriptionService
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -13,8 +13,8 @@ import {
     View,
 } from 'react-native';
 import { hasFreeTrialBeenUsed, startFreeTrialSession } from '../services/accessService';
-import { checkSubscriptionStatus } from '../services/subscriptionService';
-import { getUsageStats, setPremiumStatus } from '../services/usageService';
+import { checkSubscriptionStatus, getSubscriptionPackages, purchaseSubscription } from '../services/subscriptionService';
+import { getUsageStats } from '../services/usageService';
 import { SubscriptionStatus, UsageStats } from '../types';
 
 type PaywallSource = 'onboarding' | 'upgrade' | 'limit' | 'settings';
@@ -28,6 +28,10 @@ export default function PaywallScreen() {
     const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
     const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
     const [freeTrialUsed, setFreeTrialUsed] = useState<boolean>(false);
+    
+    // Subscription packages state
+    const [packages, setPackages] = useState<any[]>([]);
+    const [prices, setPrices] = useState({ lifetime: '$29.99', weekly: '$5.99' });
 
     useEffect(() => {
         loadData();
@@ -35,6 +39,7 @@ export default function PaywallScreen() {
 
     const loadData = async (): Promise<void> => {
         try {
+            // Load basic data
             const stats = await getUsageStats();
             setUsageStats(stats);
             
@@ -44,7 +49,28 @@ export default function PaywallScreen() {
             const trialUsed = await hasFreeTrialBeenUsed();
             setFreeTrialUsed(trialUsed);
             
-            console.log('Paywall - Data loaded:', { stats, subStatus, trialUsed });
+            // Load subscription packages
+            const subscriptionPackages = await getSubscriptionPackages();
+            setPackages(subscriptionPackages);
+            
+            // Update prices from packages
+            subscriptionPackages.forEach(pkg => {
+                if (pkg.id === 'weekly') {
+                    setPrices(prev => ({ ...prev, weekly: pkg.price }));
+                } else if (pkg.id === 'yearly') {
+                    // Lifetime olarak yearly package'ını kullanıyoruz
+                    setPrices(prev => ({ ...prev, lifetime: pkg.price }));
+                }
+            });
+            
+            console.log('Paywall - Data loaded:', { 
+                stats, 
+                subStatus, 
+                trialUsed, 
+                packages: subscriptionPackages,
+                prices 
+            });
+            
         } catch (error) {
             console.error('Error loading paywall data:', error);
         }
@@ -54,7 +80,6 @@ export default function PaywallScreen() {
         console.log('Paywall - Plan changed to:', planId);
         setSelectedPlan(planId);
         
-        // Lifetime seçilince free analyses toggle kapatılır
         if (planId === 'lifetime') {
             setFreeAnalysesEnabled(false);
         } else if (planId === 'weekly') {
@@ -66,39 +91,53 @@ export default function PaywallScreen() {
         console.log('Paywall - Toggle changed to:', value);
         setFreeAnalysesEnabled(value);
         
-        // Toggle açılınca weekly seçilir
         if (value && selectedPlan === 'lifetime') {
             setSelectedPlan('weekly');
         }
     };
 
     const handlePurchase = async (planId: string): Promise<void> => {
+        if (loading) return;
+        
         setLoading(true);
 
         try {
             console.log('Paywall - Attempting to purchase:', planId);
+            
+            // Find the package
+            let packageToPurchase;
+            if (planId === 'lifetime') {
+                // Use yearly package as lifetime
+                packageToPurchase = packages.find(pkg => pkg.id === 'yearly');
+            } else {
+                packageToPurchase = packages.find(pkg => pkg.id === planId);
+            }
+            
+            if (!packageToPurchase) {
+                Alert.alert('Error', 'Package not found. Please try again.');
+                return;
+            }
 
-            // Simulate purchase process
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Grant premium access
-            await setPremiumStatus(true);
-            console.log('Paywall - Premium status granted');
-
-            Alert.alert(
-                'Welcome to Premium! 🎉',
-                'You now have unlimited access to analyze historical places.',
-                [
-                    {
-                        text: 'Start Exploring',
-                        onPress: () => {
-                            console.log('Paywall - Navigating after purchase, source:', source);
-                            // Always go to main app after purchase
-                            router.replace('/');
+            const result = await purchaseSubscription(packageToPurchase);
+            
+            if (result.success) {
+                Alert.alert(
+                    'Welcome to Premium! 🎉',
+                    'You now have unlimited access to analyze historical places.',
+                    [
+                        {
+                            text: 'Start Exploring',
+                            onPress: () => {
+                                console.log('Paywall - Navigating after purchase');
+                                router.replace('/');
+                            }
                         }
-                    }
-                ]
-            );
+                    ]
+                );
+            } else {
+                Alert.alert('Purchase Failed', result.message || 'Please try again.');
+            }
+            
         } catch (error) {
             console.error('Paywall - Purchase error:', error);
             Alert.alert('Purchase Failed', 'There was an issue processing your purchase. Please try again.');
@@ -110,14 +149,8 @@ export default function PaywallScreen() {
     const startFreeAnalyses = async () => {
         try {
             console.log('Paywall - Starting free analyses...');
-
             await startFreeTrialSession();
-            console.log('Paywall - Free analyses session set');
-
-            // Always navigate to main app after starting free trial
-            console.log('Paywall - Navigating to main app after free trial start');
             router.replace('/');
-
         } catch (error) {
             console.error('Paywall - Error starting free analyses:', error);
             Alert.alert('Error', 'Something went wrong. Please try again.');
@@ -125,30 +158,21 @@ export default function PaywallScreen() {
     };
 
     const handleClose = () => {
-        console.log('Paywall - Closing with source:', source);
-        
         if (source === 'onboarding') {
-            // Onboarding'den geliyorsa ana sayfaya git
-            console.log('Paywall - Redirecting to main app from onboarding');
             router.replace('/');
         } else {
-            // Diğer durumlar - geri gitmeye çalış, hata olursa ana sayfaya git
             try {
                 if (router.canGoBack()) {
-                    console.log('Paywall - Going back');
                     router.back();
                 } else {
-                    console.log('Paywall - Cannot go back, redirecting to main app');
                     router.replace('/');
                 }
             } catch (error) {
-                console.log('Paywall - Error going back, redirecting to main app:', error);
                 router.replace('/');
             }
         }
     };
 
-    // Get dynamic content based on source
     const getContent = () => {
         switch (source) {
             case 'onboarding':
@@ -169,7 +193,7 @@ export default function PaywallScreen() {
                     subtitle: 'Unlock unlimited historical place analysis',
                     showUsageStats: true
                 };
-            default: // upgrade
+            default:
                 return {
                     title: 'Premium Access',
                     subtitle: 'Unlock unlimited historical place analysis',
@@ -179,9 +203,6 @@ export default function PaywallScreen() {
     };
 
     const content = getContent();
-    
-    // Debug logging
-    console.log('Paywall render - source:', source, 'selectedPlan:', selectedPlan, 'freeAnalysesEnabled:', freeAnalysesEnabled, 'freeTrialUsed:', freeTrialUsed);
 
     // If already premium, show special view
     if (subscriptionStatus?.isPremium && source !== 'onboarding') {
@@ -205,10 +226,7 @@ export default function PaywallScreen() {
                         You already have unlimited access to all features!
                     </Text>
                     
-                    <TouchableOpacity style={styles.continueButton} onPress={() => {
-                        console.log('Paywall - Premium user continuing');
-                        router.replace('/');
-                    }}>
+                    <TouchableOpacity style={styles.continueButton} onPress={() => router.replace('/')}>
                         <Text style={styles.continueButtonText}>Continue Exploring</Text>
                     </TouchableOpacity>
                 </View>
@@ -223,7 +241,6 @@ export default function PaywallScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header - Only show close button if not onboarding */}
                 {source !== 'onboarding' && (
                     <View style={styles.header}>
                         <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
@@ -232,20 +249,16 @@ export default function PaywallScreen() {
                     </View>
                 )}
 
-                {/* Main Content */}
                 <View style={styles.content}>
-                    {/* App Icon */}
                     <View style={styles.iconContainer}>
                         <View style={styles.iconBackground}>
                             <Text style={styles.logoEmoji}>🏛️</Text>
                         </View>
                     </View>
 
-                    {/* Title */}
                     <Text style={styles.title}>{content.title}</Text>
                     <Text style={styles.subtitle}>{content.subtitle}</Text>
 
-                    {/* Features */}
                     <View style={styles.featuresSection}>
                         <View style={styles.featureItem}>
                             <Text style={styles.featureIcon}>🏛️</Text>
@@ -257,7 +270,6 @@ export default function PaywallScreen() {
                         </View>
                     </View>
 
-                    {/* Usage Stats */}
                     {content.showUsageStats && usageStats && (
                         <View style={styles.usageSection}>
                             <Text style={styles.sectionTitle}>Your Current Usage</Text>
@@ -274,7 +286,6 @@ export default function PaywallScreen() {
                         </View>
                     )}
 
-                    {/* Pricing Plans */}
                     <View style={styles.pricingSection}>
                         <Text style={styles.sectionTitle}>Choose Your Plan</Text>
                         
@@ -296,7 +307,7 @@ export default function PaywallScreen() {
                                 <Text style={styles.bestValueText}>BEST VALUE</Text>
                             </View>
                             <Text style={styles.planTitle}>Lifetime Plan</Text>
-                            <Text style={styles.planPrice}>$29.99</Text>
+                            <Text style={styles.planPrice}>{prices.lifetime}</Text>
                             <Text style={styles.planSubtext}>One-time payment</Text>
                         </TouchableOpacity>
 
@@ -318,12 +329,11 @@ export default function PaywallScreen() {
                                 <Text style={styles.shortTermText}>Short Term ✓</Text>
                             </View>
                             <Text style={styles.planTitle}>Weekly Plan</Text>
-                            <Text style={styles.planPrice}>$5.99</Text>
+                            <Text style={styles.planPrice}>{prices.weekly}</Text>
                             <Text style={styles.planSubtext}>per week - auto renewable</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {/* Free Analyses Toggle - Show only if free trial hasn't been used */}
                     {!freeTrialUsed && (
                         <View style={styles.toggleSection}>
                             <View style={styles.toggleRow}>
@@ -333,7 +343,7 @@ export default function PaywallScreen() {
                                     onValueChange={handleToggleChange}
                                     trackColor={{ false: '#E5E5E5', true: '#4CAF50' }}
                                     thumbColor='#FFFFFF'
-                                    disabled={selectedPlan === 'lifetime'}
+                                    disabled={selectedPlan === 'lifetime' || loading}
                                 />
                             </View>
                             {freeAnalysesEnabled && (
@@ -342,9 +352,7 @@ export default function PaywallScreen() {
                         </View>
                     )}
 
-                    {/* Action Buttons */}
                     <View style={styles.actionsSection}>
-                        {/* Premium Button */}
                         <TouchableOpacity
                             style={[styles.premiumButton, loading && styles.premiumButtonDisabled]}
                             onPress={() => handlePurchase(selectedPlan)}
@@ -363,8 +371,7 @@ export default function PaywallScreen() {
                             )}
                         </TouchableOpacity>
 
-                        {/* Free Analyses Button - Show when toggle is enabled and free trial hasn't been used */}
-                        {freeAnalysesEnabled && !freeTrialUsed && (
+                        {freeAnalysesEnabled && !freeTrialUsed && !loading && (
                             <TouchableOpacity
                                 style={styles.freeButton}
                                 onPress={startFreeAnalyses}
@@ -377,7 +384,6 @@ export default function PaywallScreen() {
                         )}
                     </View>
 
-                    {/* Terms */}
                     <View style={styles.termsSection}>
                         <Text style={styles.termsText}>
                             By continuing, you agree to our Terms of Service and Privacy Policy.

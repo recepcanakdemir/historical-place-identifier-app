@@ -8,28 +8,30 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		27354BDBF1841018ABA5FA3E /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC85EF7CBA5B955192EB4021 /* ExpoModulesProvider.swift */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		872CE1D30BF6B6C81833143B /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42D47586F37656902775E946 /* ExpoModulesProvider.swift */; };
-		A4FED02FC8580BDB2F78E246 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 282EF7943A4EDE0979385AA0 /* PrivacyInfo.xcprivacy */; };
-		A5DEABECD8736CE15F986944 /* libPods-HistoricalPlacesFinder.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 156398BF04015C59A77E583A /* libPods-HistoricalPlacesFinder.a */; };
+		921E198BE867A95D4C9944F2 /* libPods-HistoricalPlaces.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5769C6D542CD0D4D365B2530 /* libPods-HistoricalPlaces.a */; };
+		9477C3CEE30E060D8296FC12 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 920BC64175500B17EBE29ABD /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		DC636A142E5B73980090BAC7 /* Configuration.storekit in Resources */ = {isa = PBXBuildFile; fileRef = DC636A132E5B73980090BAC7 /* Configuration.storekit */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		13B07F961A680F5B00A75B9A /* HistoricalPlacesFinder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HistoricalPlacesFinder.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = HistoricalPlacesFinder/Images.xcassets; sourceTree = "<group>"; };
-		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = HistoricalPlacesFinder/Info.plist; sourceTree = "<group>"; };
-		156398BF04015C59A77E583A /* libPods-HistoricalPlacesFinder.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-HistoricalPlacesFinder.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		282EF7943A4EDE0979385AA0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = HistoricalPlacesFinder/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		42D47586F37656902775E946 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-HistoricalPlacesFinder/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		6BF0D2BC7756D4AFDEE523C8 /* Pods-HistoricalPlacesFinder.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HistoricalPlacesFinder.release.xcconfig"; path = "Target Support Files/Pods-HistoricalPlacesFinder/Pods-HistoricalPlacesFinder.release.xcconfig"; sourceTree = "<group>"; };
-		AA0258F475E4B2DBA66CAAD2 /* Pods-HistoricalPlacesFinder.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HistoricalPlacesFinder.debug.xcconfig"; path = "Target Support Files/Pods-HistoricalPlacesFinder/Pods-HistoricalPlacesFinder.debug.xcconfig"; sourceTree = "<group>"; };
-		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = HistoricalPlacesFinder/SplashScreen.storyboard; sourceTree = "<group>"; };
+		13B07F961A680F5B00A75B9A /* HistoricalPlaces.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HistoricalPlaces.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = HistoricalPlaces/Images.xcassets; sourceTree = "<group>"; };
+		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = HistoricalPlaces/Info.plist; sourceTree = "<group>"; };
+		5769C6D542CD0D4D365B2530 /* libPods-HistoricalPlaces.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-HistoricalPlaces.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		920BC64175500B17EBE29ABD /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = HistoricalPlaces/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = HistoricalPlaces/SplashScreen.storyboard; sourceTree = "<group>"; };
+		AC85EF7CBA5B955192EB4021 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-HistoricalPlaces/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		B54689518754160E8755EE9B /* Pods-HistoricalPlaces.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HistoricalPlaces.release.xcconfig"; path = "Target Support Files/Pods-HistoricalPlaces/Pods-HistoricalPlaces.release.xcconfig"; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		D034F13BEFA77B9581932D5E /* Pods-HistoricalPlaces.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HistoricalPlaces.debug.xcconfig"; path = "Target Support Files/Pods-HistoricalPlaces/Pods-HistoricalPlaces.debug.xcconfig"; sourceTree = "<group>"; };
+		DC636A132E5B73980090BAC7 /* Configuration.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Configuration.storekit; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = HistoricalPlacesFinder/AppDelegate.swift; sourceTree = "<group>"; };
-		F11748442D0722820044C1D9 /* HistoricalPlacesFinder-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "HistoricalPlacesFinder-Bridging-Header.h"; path = "HistoricalPlacesFinder/HistoricalPlacesFinder-Bridging-Header.h"; sourceTree = "<group>"; };
+		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = HistoricalPlaces/AppDelegate.swift; sourceTree = "<group>"; };
+		F11748442D0722820044C1D9 /* HistoricalPlaces-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "HistoricalPlaces-Bridging-Header.h"; path = "HistoricalPlaces/HistoricalPlaces-Bridging-Header.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,50 +39,42 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A5DEABECD8736CE15F986944 /* libPods-HistoricalPlacesFinder.a in Frameworks */,
+				921E198BE867A95D4C9944F2 /* libPods-HistoricalPlaces.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		13B07FAE1A68108700A75B9A /* HistoricalPlacesFinder */ = {
+		13B07FAE1A68108700A75B9A /* HistoricalPlaces */ = {
 			isa = PBXGroup;
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
-				F11748442D0722820044C1D9 /* HistoricalPlacesFinder-Bridging-Header.h */,
+				F11748442D0722820044C1D9 /* HistoricalPlaces-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				282EF7943A4EDE0979385AA0 /* PrivacyInfo.xcprivacy */,
+				920BC64175500B17EBE29ABD /* PrivacyInfo.xcprivacy */,
 			);
-			name = HistoricalPlacesFinder;
+			name = HistoricalPlaces;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				156398BF04015C59A77E583A /* libPods-HistoricalPlacesFinder.a */,
+				5769C6D542CD0D4D365B2530 /* libPods-HistoricalPlaces.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
-		50A6219BB83FE209FA81ED78 /* ExpoModulesProviders */ = {
+		321FEA73C76F8DAD52F73D70 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				5D7CD0B64479A31F26E5A4B7 /* HistoricalPlacesFinder */,
+				FCC2AFA6C41053EDA63F03A6 /* HistoricalPlaces */,
 			);
 			name = ExpoModulesProviders;
-			sourceTree = "<group>";
-		};
-		5D7CD0B64479A31F26E5A4B7 /* HistoricalPlacesFinder */ = {
-			isa = PBXGroup;
-			children = (
-				42D47586F37656902775E946 /* ExpoModulesProvider.swift */,
-			);
-			name = HistoricalPlacesFinder;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -93,12 +87,13 @@
 		83CBB9F61A601CBA00E9B192 = {
 			isa = PBXGroup;
 			children = (
-				13B07FAE1A68108700A75B9A /* HistoricalPlacesFinder */,
+				DC636A132E5B73980090BAC7 /* Configuration.storekit */,
+				13B07FAE1A68108700A75B9A /* HistoricalPlaces */,
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				B3CD9FCBE794823359D5738E /* Pods */,
-				50A6219BB83FE209FA81ED78 /* ExpoModulesProviders */,
+				C7555B07D4FB605C13E32AB8 /* Pods */,
+				321FEA73C76F8DAD52F73D70 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -108,19 +103,9 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* HistoricalPlacesFinder.app */,
+				13B07F961A680F5B00A75B9A /* HistoricalPlaces.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		B3CD9FCBE794823359D5738E /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				AA0258F475E4B2DBA66CAAD2 /* Pods-HistoricalPlacesFinder.debug.xcconfig */,
-				6BF0D2BC7756D4AFDEE523C8 /* Pods-HistoricalPlacesFinder.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -129,32 +114,49 @@
 				BB2F792C24A3F905000567C9 /* Expo.plist */,
 			);
 			name = Supporting;
-			path = HistoricalPlacesFinder/Supporting;
+			path = HistoricalPlaces/Supporting;
+			sourceTree = "<group>";
+		};
+		C7555B07D4FB605C13E32AB8 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				D034F13BEFA77B9581932D5E /* Pods-HistoricalPlaces.debug.xcconfig */,
+				B54689518754160E8755EE9B /* Pods-HistoricalPlaces.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		FCC2AFA6C41053EDA63F03A6 /* HistoricalPlaces */ = {
+			isa = PBXGroup;
+			children = (
+				AC85EF7CBA5B955192EB4021 /* ExpoModulesProvider.swift */,
+			);
+			name = HistoricalPlaces;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		13B07F861A680F5B00A75B9A /* HistoricalPlacesFinder */ = {
+		13B07F861A680F5B00A75B9A /* HistoricalPlaces */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "HistoricalPlacesFinder" */;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "HistoricalPlaces" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				E5B785E5EB3E80483A5397D4 /* [Expo] Configure project */,
+				909C4224FEFA8E50F4DAC8A2 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				40163FBCF886E3AE084BF36A /* [CP] Embed Pods Frameworks */,
+				8BDDA680D36058EE9C6CB223 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = HistoricalPlacesFinder;
-			productName = HistoricalPlacesFinder;
-			productReference = 13B07F961A680F5B00A75B9A /* HistoricalPlacesFinder.app */;
+			name = HistoricalPlaces;
+			productName = HistoricalPlaces;
+			productReference = 13B07F961A680F5B00A75B9A /* HistoricalPlaces.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -170,7 +172,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "HistoricalPlacesFinder" */;
+			buildConfigurationList = 83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "HistoricalPlaces" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -183,7 +185,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				13B07F861A680F5B00A75B9A /* HistoricalPlacesFinder */,
+				13B07F861A680F5B00A75B9A /* HistoricalPlaces */,
 			);
 		};
 /* End PBXProject section */
@@ -194,9 +196,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
+				DC636A142E5B73980090BAC7 /* Configuration.storekit in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				A4FED02FC8580BDB2F78E246 /* PrivacyInfo.xcprivacy in Resources */,
+				9477C3CEE30E060D8296FC12 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,29 +236,11 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-HistoricalPlacesFinder-checkManifestLockResult.txt",
+				"$(DERIVED_FILE_DIR)/Pods-HistoricalPlaces-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-		40163FBCF886E3AE084BF36A /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-HistoricalPlacesFinder/Pods-HistoricalPlacesFinder-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-HistoricalPlacesFinder/Pods-HistoricalPlacesFinder-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
@@ -264,7 +249,7 @@
 			files = (
 			);
 			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-HistoricalPlacesFinder/Pods-HistoricalPlacesFinder-resources.sh",
+				"${PODS_ROOT}/Target Support Files/Pods-HistoricalPlaces/Pods-HistoricalPlaces-resources.sh",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/EXConstants.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/EXConstants/ExpoConstants_privacy.bundle",
 				"${PODS_CONFIGURATION_BUILD_DIR}/ExpoFileSystem/ExpoFileSystem_privacy.bundle",
@@ -299,10 +284,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-HistoricalPlacesFinder/Pods-HistoricalPlacesFinder-resources.sh\"\n";
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-HistoricalPlaces/Pods-HistoricalPlaces-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		E5B785E5EB3E80483A5397D4 /* [Expo] Configure project */ = {
+		8BDDA680D36058EE9C6CB223 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-HistoricalPlaces/Pods-HistoricalPlaces-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-HistoricalPlaces/Pods-HistoricalPlaces-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		909C4224FEFA8E50F4DAC8A2 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -319,7 +322,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-HistoricalPlacesFinder/expo-configure-project.sh\"\n";
+			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-HistoricalPlaces/expo-configure-project.sh\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -329,7 +332,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				872CE1D30BF6B6C81833143B /* ExpoModulesProvider.swift in Sources */,
+				27354BDBF1841018ABA5FA3E /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -338,18 +341,19 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = AA0258F475E4B2DBA66CAAD2 /* Pods-HistoricalPlacesFinder.debug.xcconfig */;
+			baseConfigurationReference = D034F13BEFA77B9581932D5E /* Pods-HistoricalPlaces.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = HistoricalPlacesFinder/HistoricalPlacesFinder.entitlements;
+				CODE_SIGN_ENTITLEMENTS = HistoricalPlaces/HistoricalPlaces.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 3WL9FYSV99;
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"FB_SONARKIT_ENABLED=1",
 				);
-				INFOPLIST_FILE = HistoricalPlacesFinder/Info.plist;
+				INFOPLIST_FILE = HistoricalPlaces/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -362,9 +366,9 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.HistoricalPlacesFinder;
-				PRODUCT_NAME = HistoricalPlacesFinder;
-				SWIFT_OBJC_BRIDGING_HEADER = "HistoricalPlacesFinder/HistoricalPlacesFinder-Bridging-Header.h";
+				PRODUCT_BUNDLE_IDENTIFIER = com.recapp.landmarkai;
+				PRODUCT_NAME = HistoricalPlaces;
+				SWIFT_OBJC_BRIDGING_HEADER = "HistoricalPlaces/HistoricalPlaces-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -374,13 +378,14 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 6BF0D2BC7756D4AFDEE523C8 /* Pods-HistoricalPlacesFinder.release.xcconfig */;
+			baseConfigurationReference = B54689518754160E8755EE9B /* Pods-HistoricalPlaces.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_ENTITLEMENTS = HistoricalPlacesFinder/HistoricalPlacesFinder.entitlements;
+				CODE_SIGN_ENTITLEMENTS = HistoricalPlaces/HistoricalPlaces.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
-				INFOPLIST_FILE = HistoricalPlacesFinder/Info.plist;
+				DEVELOPMENT_TEAM = 3WL9FYSV99;
+				INFOPLIST_FILE = HistoricalPlaces/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -393,9 +398,9 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.anonymous.HistoricalPlacesFinder;
-				PRODUCT_NAME = HistoricalPlacesFinder;
-				SWIFT_OBJC_BRIDGING_HEADER = "HistoricalPlacesFinder/HistoricalPlacesFinder-Bridging-Header.h";
+				PRODUCT_BUNDLE_IDENTIFIER = com.recapp.landmarkai;
+				PRODUCT_NAME = HistoricalPlaces;
+				SWIFT_OBJC_BRIDGING_HEADER = "HistoricalPlaces/HistoricalPlaces-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -529,7 +534,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "HistoricalPlacesFinder" */ = {
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "HistoricalPlaces" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
@@ -538,7 +543,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "HistoricalPlacesFinder" */ = {
+		83CBB9FA1A601CBA00E9B192 /* Build configuration list for PBXProject "HistoricalPlaces" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				83CBBA201A601CBA00E9B192 /* Debug */,
