@@ -13,48 +13,98 @@ import {
     View,
 } from 'react-native';
 import { hasFreeTrialBeenUsed, startFreeTrialSession } from '../services/accessService';
-import { checkSubscriptionStatus } from '../services/subscriptionService';
-import { getUsageStats, setPremiumStatus } from '../services/usageService';
+import { checkSubscriptionStatus, purchaseSubscription } from '../services/subscriptionService';
+import { getUsageStats } from '../services/usageService';
 import { SubscriptionStatus, UsageStats } from '../types';
 
 type PaywallSource = 'onboarding' | 'upgrade' | 'limit' | 'settings';
 
 export default function PaywallScreen() {
     const { source = 'upgrade' } = useLocalSearchParams<{ source?: PaywallSource }>();
-    
+
     const [loading, setLoading] = useState<boolean>(false);
     const [selectedPlan, setSelectedPlan] = useState<string>('weekly');
     const [freeAnalysesEnabled, setFreeAnalysesEnabled] = useState<boolean>(true);
     const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
     const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
     const [freeTrialUsed, setFreeTrialUsed] = useState<boolean>(false);
+    const [packages, setPackages] = useState<any[]>([]);  // any[] ile başlatın
+    const [loadingPackages, setLoadingPackages] = useState<boolean>(true);
 
-    useEffect(() => {
+    const getPackageInfo = (planId: any) => {
+        const pkg = packages.find(p =>
+            p.id === `$rc_${planId}` ||
+            p.rcPackage?.identifier === `$rc_${planId}`
+        );
+        return pkg ? {
+            price: pkg.price || '$0.00',
+            title: pkg.title || 'Plan',
+            description: pkg.description || ''
+        } : {
+            price: planId === 'lifetime' ? '$29.99' : '$5.99',
+            title: planId === 'lifetime' ? 'Lifetime Plan' : 'Weekly Plan',
+            description: ''
+        };
+    };
+
+    /* const loadData = async (): Promise<void> => {
+         try {
+             const stats = await getUsageStats();
+             setUsageStats(stats);
+ 
+             const subStatus = await checkSubscriptionStatus();
+             setSubscriptionStatus(subStatus as SubscriptionStatus);
+ 
+             const trialUsed = await hasFreeTrialBeenUsed();
+             setFreeTrialUsed(trialUsed);
+ 
+             console.log('Paywall - Data loaded:', { stats, subStatus, trialUsed });
+         } catch (error) {
+             console.error('Error loading paywall data:', error);
+         }
+     };*/
+
+      useEffect(() => {
+        console.log('useEffect triggered, calling loadData');
         loadData();
     }, []);
 
-    const loadData = async (): Promise<void> => {
-        try {
-            const stats = await getUsageStats();
-            setUsageStats(stats);
-            
-            const subStatus = await checkSubscriptionStatus();
-            setSubscriptionStatus(subStatus as SubscriptionStatus);
-            
-            const trialUsed = await hasFreeTrialBeenUsed();
-            setFreeTrialUsed(trialUsed);
-            
-            console.log('Paywall - Data loaded:', { stats, subStatus, trialUsed });
-        } catch (error) {
-            console.error('Error loading paywall data:', error);
-        }
-    };
+ const loadData = async () => {
+    console.log('🔄 loadData starting...');
+    try {
+        const stats = await getUsageStats();
+        setUsageStats(stats);
+        console.log('✅ Stats loaded');
+
+        const subStatus = await checkSubscriptionStatus();
+        setSubscriptionStatus(subStatus as SubscriptionStatus);
+        console.log('✅ Subscription status loaded');
+
+        const trialUsed = await hasFreeTrialBeenUsed();
+        setFreeTrialUsed(trialUsed);
+        console.log('✅ Trial status loaded');
+
+        // Packages loading
+        console.log('🔄 Loading packages...');
+        const { getSubscriptionPackages } = await import('../services/subscriptionService');
+        const availablePackages = await getSubscriptionPackages();
+        console.log('📦 Packages received:', availablePackages);
+        
+        setPackages(availablePackages);
+        setLoadingPackages(false);
+        console.log('✅ All data loaded, loadingPackages set to false');
+
+    } catch (error) {
+        console.error('❌ Error loading paywall data:', error);
+        setLoadingPackages(false); // Error durumunda da false yap
+    }
+};
 
     const handlePlanChange = (planId: string) => {
         console.log('Paywall - Plan changed to:', planId);
         setSelectedPlan(planId);
-        
-        // Lifetime seçilince free analyses toggle kapatılır
+
+        // Lifetime selected disables free analyses toggle
         if (planId === 'lifetime') {
             setFreeAnalysesEnabled(false);
         } else if (planId === 'weekly') {
@@ -65,7 +115,7 @@ export default function PaywallScreen() {
     const handleToggleChange = (value: boolean) => {
         console.log('Paywall - Toggle changed to:', value);
         setFreeAnalysesEnabled(value);
-        
+
         // Toggle açılınca weekly seçilir
         if (value && selectedPlan === 'lifetime') {
             setSelectedPlan('weekly');
@@ -78,27 +128,28 @@ export default function PaywallScreen() {
         try {
             console.log('Paywall - Attempting to purchase:', planId);
 
-            // Simulate purchase process
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Use the updated purchaseSubscription function
+            const result = await purchaseSubscription(planId);
 
-            // Grant premium access
-            await setPremiumStatus(true);
-            console.log('Paywall - Premium status granted');
-
-            Alert.alert(
-                'Welcome to Premium! 🎉',
-                'You now have unlimited access to analyze historical places.',
-                [
-                    {
-                        text: 'Start Exploring',
-                        onPress: () => {
-                            console.log('Paywall - Navigating after purchase, source:', source);
-                            // Always go to main app after purchase
-                            router.replace('/');
+            if (result.success) {
+                Alert.alert(
+                    'Welcome to Premium! 🎉',
+                    planId === 'lifetime'
+                        ? 'You now have lifetime access to analyze landmarks!'
+                        : 'You now have unlimited access to analyze landmarks.',
+                    [
+                        {
+                            text: 'Start Exploring',
+                            onPress: () => {
+                                console.log('Paywall - Navigating after purchase, source:', source);
+                                router.replace('/');
+                            }
                         }
-                    }
-                ]
-            );
+                    ]
+                );
+            } else {
+                Alert.alert('Purchase Failed', result.message || 'There was an issue processing your purchase. Please try again.');
+            }
         } catch (error) {
             console.error('Paywall - Purchase error:', error);
             Alert.alert('Purchase Failed', 'There was an issue processing your purchase. Please try again.');
@@ -126,7 +177,7 @@ export default function PaywallScreen() {
 
     const handleClose = () => {
         console.log('Paywall - Closing with source:', source);
-        
+
         if (source === 'onboarding') {
             // Onboarding'den geliyorsa ana sayfaya git
             console.log('Paywall - Redirecting to main app from onboarding');
@@ -153,33 +204,52 @@ export default function PaywallScreen() {
         switch (source) {
             case 'onboarding':
                 return {
-                    title: 'Welcome to Historical Places',
+                    title: 'Welcome to LandmarkAI',
                     subtitle: 'Discover the stories behind monuments and landmarks',
                     showUsageStats: false
                 };
             case 'limit':
                 return {
                     title: 'Analysis Limit Reached',
-                    subtitle: 'Upgrade to continue discovering historical places',
+                    subtitle: 'Upgrade to continue discovering landmarks',
                     showUsageStats: true
                 };
             case 'settings':
                 return {
                     title: 'Premium Access',
-                    subtitle: 'Unlock unlimited historical place analysis',
+                    subtitle: 'Unlock unlimited landmark analysis',
                     showUsageStats: true
                 };
             default: // upgrade
                 return {
                     title: 'Premium Access',
-                    subtitle: 'Unlock unlimited historical place analysis',
+                    subtitle: 'Unlock unlimited landmark analysis',
                     showUsageStats: true
                 };
         }
     };
 
+    const handleRestorePurchases = async () => {
+        try {
+            setLoading(true);
+            const { restorePurchases } = await import('../services/subscriptionService');
+            const result = await restorePurchases();
+
+            if (result.success && result.isPremium) {
+                Alert.alert('Restored!', 'Your premium access has been restored.', [
+                    { text: 'Continue', onPress: () => router.replace('/') }
+                ]);
+            } else {
+                Alert.alert('No Purchases', 'No previous purchases found to restore.');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'Failed to restore purchases. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
     const content = getContent();
-    
+
     // Debug logging
     console.log('Paywall render - source:', source, 'selectedPlan:', selectedPlan, 'freeAnalysesEnabled:', freeAnalysesEnabled, 'freeTrialUsed:', freeTrialUsed);
 
@@ -192,19 +262,19 @@ export default function PaywallScreen() {
                         <Text style={styles.closeButtonText}>✕</Text>
                     </TouchableOpacity>
                 </View>
-                
+
                 <View style={styles.premiumActiveContainer}>
                     <View style={styles.iconContainer}>
                         <View style={styles.iconBackground}>
                             <Text style={styles.logoEmoji}>🏛️</Text>
                         </View>
                     </View>
-                    
-                    <Text style={styles.premiumActiveTitle}>✨ Premium Active</Text>
+
+
                     <Text style={styles.premiumActiveText}>
                         You already have unlimited access to all features!
                     </Text>
-                    
+
                     <TouchableOpacity style={styles.continueButton} onPress={() => {
                         console.log('Paywall - Premium user continuing');
                         router.replace('/');
@@ -218,8 +288,8 @@ export default function PaywallScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <ScrollView 
-                style={styles.scrollView} 
+            <ScrollView
+                style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
@@ -249,7 +319,7 @@ export default function PaywallScreen() {
                     <View style={styles.featuresSection}>
                         <View style={styles.featureItem}>
                             <Text style={styles.featureIcon}>🏛️</Text>
-                            <Text style={styles.featureText}>Identify unlimited historical places</Text>
+                            <Text style={styles.featureText}>Identify unlimited landmarks</Text>
                         </View>
                         <View style={styles.featureItem}>
                             <Text style={styles.featureIcon}>🔓</Text>
@@ -274,54 +344,36 @@ export default function PaywallScreen() {
                         </View>
                     )}
 
-                    {/* Pricing Plans */}
-                    <View style={styles.pricingSection}>
-                        <Text style={styles.sectionTitle}>Choose Your Plan</Text>
-                        
-                        {/* Lifetime Plan */}
-                        <TouchableOpacity
-                            style={[
-                                styles.planCard,
-                                selectedPlan === 'lifetime' && styles.selectedPlanCard
-                            ]}
-                            onPress={() => handlePlanChange('lifetime')}
-                            activeOpacity={0.7}
-                        >
-                            {selectedPlan === 'lifetime' && (
-                                <View style={styles.selectedIndicator}>
-                                    <Text style={styles.checkmark}>✓</Text>
-                                </View>
-                            )}
-                            <View style={styles.bestValueBadge}>
-                                <Text style={styles.bestValueText}>BEST VALUE</Text>
-                            </View>
-                            <Text style={styles.planTitle}>Lifetime Plan</Text>
-                            <Text style={styles.planPrice}>$29.99</Text>
-                            <Text style={styles.planSubtext}>One-time payment</Text>
-                        </TouchableOpacity>
 
-                        {/* Weekly Plan */}
-                        <TouchableOpacity
-                            style={[
-                                styles.planCard,
-                                selectedPlan === 'weekly' && styles.selectedPlanCard
-                            ]}
-                            onPress={() => handlePlanChange('weekly')}
-                            activeOpacity={0.7}
-                        >
-                            {selectedPlan === 'weekly' && (
-                                <View style={styles.selectedIndicator}>
-                                    <Text style={styles.checkmark}>✓</Text>
-                                </View>
-                            )}
-                            <View style={styles.shortTermBadge}>
-                                <Text style={styles.shortTermText}>Short Term ✓</Text>
-                            </View>
-                            <Text style={styles.planTitle}>Weekly Plan</Text>
-                            <Text style={styles.planPrice}>$5.99</Text>
-                            <Text style={styles.planSubtext}>per week - auto renewable</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {loadingPackages ? (
+                        <ActivityIndicator size="large" color="#4A90E2" />
+                    ) : (
+                        <View style={styles.pricingSection}>
+                            <Text style={styles.sectionTitle}>Choose Your Plan</Text>
+
+                            {/* Lifetime Plan */}
+                            <TouchableOpacity
+                                style={[styles.planCard, selectedPlan === 'lifetime' && styles.selectedPlanCard]}
+                                onPress={() => handlePlanChange('lifetime')}
+                            >
+                                {/* Existing UI elements */}
+                                <Text style={styles.planTitle}>Lifetime Plan</Text>
+                                <Text style={styles.planPrice}>{getPackageInfo('lifetime').price}</Text>
+                                <Text style={styles.planSubtext}>One-time payment</Text>
+                            </TouchableOpacity>
+
+                            {/* Weekly Plan */}
+                            <TouchableOpacity
+                                style={[styles.planCard, selectedPlan === 'weekly' && styles.selectedPlanCard]}
+                                onPress={() => handlePlanChange('weekly')}
+                            >
+                                {/* Existing UI elements */}
+                                <Text style={styles.planTitle}>Weekly Plan</Text>
+                                <Text style={styles.planPrice}>{getPackageInfo('weekly').price}</Text>
+                                <Text style={styles.planSubtext}>per week - auto renewable</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                     {/* Free Analyses Toggle - Show only if free trial hasn't been used */}
                     {!freeTrialUsed && (
@@ -355,8 +407,9 @@ export default function PaywallScreen() {
                                 <ActivityIndicator size="small" color="#FFFFFF" />
                             ) : (
                                 <>
+
                                     <Text style={styles.premiumButtonText}>
-                                        {selectedPlan === 'lifetime' ? 'Get Lifetime Access' : 'Start Premium Weekly'}
+                                        {selectedPlan === 'lifetime' ? 'Get Lifetime Access - $29.99' : 'Start Premium Weekly - $5.99'}
                                     </Text>
                                     <Text style={styles.buttonArrow}>→</Text>
                                 </>
@@ -375,7 +428,15 @@ export default function PaywallScreen() {
                                 </Text>
                             </TouchableOpacity>
                         )}
+
+                        <TouchableOpacity
+                            style={styles.linkButton}
+                            onPress={handleRestorePurchases}
+                        >
+                            <Text style={styles.linkText}>Already purchased? Restore</Text>
+                        </TouchableOpacity>
                     </View>
+
 
                     {/* Terms */}
                     <View style={styles.termsSection}>
@@ -401,7 +462,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         paddingBottom: 40,
     },
-    
+
     // Header
     header: {
         flexDirection: 'row',
@@ -420,7 +481,7 @@ const styles = StyleSheet.create({
         fontSize: 18,
         color: '#666',
     },
-    
+
     // Content
     content: {
         paddingHorizontal: 20,
@@ -719,4 +780,15 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 18,
     },
+    linkButton: {
+        paddingVertical: 12,
+        alignItems: 'center',
+    },
+    linkText: {
+        color: '#4A90E2',
+        fontSize: 14,
+        fontWeight: '500',
+        textDecorationLine: 'underline',
+    },
 });
+

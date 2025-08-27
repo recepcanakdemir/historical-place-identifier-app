@@ -79,3 +79,15 @@ export interface AccessResult {
   shouldShowPaywall: boolean;
   paywallSource?: 'onboarding' | 'upgrade' | 'limit' | 'settings';
 }
+// types/index.tsx'te Package interface'i ekleyin:
+export interface Package {
+  id: string;
+  title: string;
+  description: string;
+  price: string;
+  localizedPrice: number;
+  currencyCode: string;
+  subscriptionPeriod?: string | null;
+  packageType: string;
+  rcPackage?: any;
+}

@@ -273,7 +273,7 @@ const analyzeWithGemini = async (imageUri, locationData = null) => {
 
 // Main export function
 export const analyzeHistoricalPlace = async (imageUri, locationData = null) => {
-  console.log('🎯 analyzeHistoricalPlace called with:');
+  console.log('🎯 analyzeLandmark called with:');
   console.log('- imageUri:', imageUri ? 'provided' : 'missing');
   console.log('- locationData:', locationData);
   

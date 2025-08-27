@@ -149,7 +149,7 @@ export default function CameraScreen() {
             onPress={() => {
               Alert.alert(
                 'Camera Permission',
-                'Please enable camera access in Settings > Historical Places > Camera',
+                'Please enable camera access in Settings > LandmarkAI> Camera',
                 [
                   { text: 'Cancel', style: 'cancel' },
                   { text: 'Go to Settings', onPress: () => {/* Open settings */} }
@@ -270,7 +270,7 @@ export default function CameraScreen() {
         <View style={styles.instructionsContainer}>
           <View style={styles.instructionsBubble}>
             <Text style={styles.instructionsText}>
-              📸 Point at a historical building or monument
+              📸 Point at a historical building or monument or a landmark
             </Text>
           </View>
         </View>

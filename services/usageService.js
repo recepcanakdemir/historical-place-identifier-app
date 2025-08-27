@@ -147,11 +147,25 @@ export const getUsageStats = async () => {
 };
 
 // Reset usage (for testing purposes)
-export const resetUsage = async () => {
+/*export const resetUsage = async () => {
   try {
     await AsyncStorage.removeItem(USAGE_STORAGE_KEY);
     await AsyncStorage.removeItem(PREMIUM_STORAGE_KEY);
     console.log('Usage data reset');
+  } catch (error) {
+    console.error('Error resetting usage:', error);
+  }
+};*/
+export const resetUsage = async () => {
+  try {
+    await AsyncStorage.removeItem(USAGE_STORAGE_KEY);
+    await AsyncStorage.removeItem(PREMIUM_STORAGE_KEY);
+    
+    // RevenueCat'i de reset et
+    const { logOutUser } = require('./subscriptionService');
+    await logOutUser();
+    
+    console.log('Usage data and RevenueCat reset');
   } catch (error) {
     console.error('Error resetting usage:', error);
   }

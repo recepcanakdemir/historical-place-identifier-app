@@ -143,7 +143,7 @@ export default function ResultScreen() {
       
       Alert.alert(
         'Saved!',
-        'This historical place has been saved to your collection.',
+        'This landmark has been saved to your collection.',
         [{ text: 'OK' }]
       );
     } catch (error) {
@@ -162,7 +162,7 @@ export default function ResultScreen() {
     if (!placeInfo) return;
     
     try {
-      const shareText = `🏛️ ${placeInfo.name}\n\n${placeInfo.description}\n\n📍 ${placeInfo.location}\n\nDiscovered with Historical Place Finder app!`;
+      const shareText = `🏛️ ${placeInfo.name}\n\n${placeInfo.description}\n\n📍 ${placeInfo.location}\n\nDiscovered with LandmarkAI app!`;
       
       await Share.share({
         message: shareText,

@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Historical Places",
+    "name": "LandmarkAI: Landmark Identifier AI",
     "slug": "HistoricalPlacesFinder",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "historicalplacesfinder",
+    "scheme": "landmarkai",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -18,7 +18,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.HistoricalPlacesFinder",
+      "bundleIdentifier": "com.recapp.landmarkai",
       "splash": {
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
@@ -26,10 +26,12 @@
         "tabletImage": "./assets/images/splash-icon.png"
       },
       "infoPlist": {
-        "NSCameraUsageDescription": "This app uses the camera to capture photos of historical places for AI analysis.",
-        "NSLocationWhenInUseUsageDescription": "This app uses location to provide more accurate historical place identification.",
-        "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to analyze images of historical places."
-      }
+        "NSCameraUsageDescription": "LandmarkAI uses the camera to capture photos of landmarks for AI identification and analysis.",
+        "NSLocationWhenInUseUsageDescription": "LandmarkAI uses location to provide more accurate landmark identification and historical context.",
+        "NSPhotoLibraryUsageDescription": "LandmarkAI needs access to your photo library to analyze images of landmarks and historical places.",
+        "NSUserTrackingUsageDescription": "LandmarkAI uses tracking to provide personalized experience and improve app performance."
+      },
+      "appleTeamId": "9LGCY9Q8N7"
     },
     "android": {
       "adaptiveIcon": {
@@ -37,7 +39,7 @@
         "backgroundColor": "#FFFFFF"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.historicalplaces",
+      "package": "com.recapp.landmarkai",
       "splash": {
         "image": "./assets/images/splash-icon.png",
         "resizeMode": "contain",
@@ -47,7 +49,9 @@
         "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "com.android.vending.BILLING",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -65,24 +69,25 @@
           "resizeMode": "contain",
           "backgroundColor": "#FFFFFF"
         }
+
       ],
       "expo-localization",
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to capture photos of historical places."
+          "cameraPermission": "Allow LandmarkAI to access your camera to capture photos of landmarks and historical places."
         }
       ],
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location for more accurate historical place identification."
+          "locationAlwaysAndWhenInUsePermission": "Allow LandmarkAI to use your location for more accurate landmark identification and historical context."
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos to analyze images of historical places."
+          "photosPermission": "Allow LandmarkAI to access your photos to analyze images of landmarks and historical places."
         }
       ]
     ],
@@ -94,8 +99,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "your-project-id-here"
+        "projectId": "e56d4b56-21a6-4eb4-b2b9-6367c6c80fbc"
       }
-    }
+    },
+    "owner": "recepsienen"
   }
 }

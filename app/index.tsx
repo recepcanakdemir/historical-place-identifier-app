@@ -122,7 +122,7 @@ export default function HomeScreen() {
       
       // Load subscription status
       const subStatus = await checkSubscriptionStatus();
-      setSubscriptionStatus(subStatus);
+      setSubscriptionStatus(subStatus as SubscriptionStatus);
       
       // Load trial info
       const trial = await checkTrialStatus();
@@ -133,7 +133,6 @@ export default function HomeScreen() {
       console.error('Error loading app data:', error);
     }
   };
-
   const takePhoto = (): void => {
     closeMenu();
     setTimeout(() => router.push('/camera'), 100);
@@ -310,7 +309,7 @@ export default function HomeScreen() {
           <View style={styles.hamburgerLine} />
           <View style={styles.hamburgerLine} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{uiTexts.appName || 'Historical Places'}</Text>
+        <Text style={styles.headerTitle}>{uiTexts.appName || 'LandmarkAI'}</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
@@ -451,7 +450,7 @@ export default function HomeScreen() {
                 <View style={styles.menuDivider} />
 
                 <View style={styles.menuFooter}>
-                  <Text style={styles.menuFooterText}>Historical Place Finder</Text>
+                  <Text style={styles.menuFooterText}>LandmarkAI</Text>
                   <Text style={styles.menuFooterSubtext}>v1.0.0</Text>
                   {usageStats && (
                     <Text style={styles.menuFooterUsage}>

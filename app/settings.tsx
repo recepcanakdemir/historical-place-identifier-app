@@ -1,30 +1,30 @@
 // app/settings.tsx - Completely Fixed TypeScript Version
-import React, { useState, useEffect } from 'react';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
   Alert,
-  Modal,
   FlatList,
   ListRenderItem,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
 import {
   SUPPORTED_LANGUAGES,
-  getCurrentLanguage,
   changeLanguage,
-  resetToDeviceLanguage,
+  getCurrentLanguage,
   getDeviceLanguage,
   getUITexts,
+  resetToDeviceLanguage,
 } from '../services/languageService';
-import { getUsageStats, resetUsage } from '../services/usageService';
 import { checkSubscriptionStatus, restorePurchases } from '../services/subscriptionService';
+import { getUsageStats, resetUsage } from '../services/usageService';
 // IMPORT EKLENDİ:
-import { UsageStats, SubscriptionStatus, Language } from '../types';
+import { Language, SubscriptionStatus, UsageStats } from '../types';
 
 export default function SettingsScreen() {
   const [currentLang, setCurrentLang] = useState<string>('en');
@@ -127,7 +127,7 @@ export default function SettingsScreen() {
   };
 
   const handleUpgradeToPremium = (): void => {
-    router.push('/premium');
+    router.push('/paywall?source=settings');
   };
 
   const handleRestorePurchases = async (): Promise<void> => {
