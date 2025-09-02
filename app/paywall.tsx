@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Linking,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -64,41 +65,41 @@ export default function PaywallScreen() {
          }
      };*/
 
-      useEffect(() => {
+    useEffect(() => {
         console.log('useEffect triggered, calling loadData');
         loadData();
     }, []);
 
- const loadData = async () => {
-    console.log('🔄 loadData starting...');
-    try {
-        const stats = await getUsageStats();
-        setUsageStats(stats);
-        console.log('✅ Stats loaded');
+    const loadData = async () => {
+        console.log('🔄 loadData starting...');
+        try {
+            const stats = await getUsageStats();
+            setUsageStats(stats);
+            console.log('✅ Stats loaded');
 
-        const subStatus = await checkSubscriptionStatus();
-        setSubscriptionStatus(subStatus as SubscriptionStatus);
-        console.log('✅ Subscription status loaded');
+            const subStatus = await checkSubscriptionStatus();
+            setSubscriptionStatus(subStatus as SubscriptionStatus);
+            console.log('✅ Subscription status loaded');
 
-        const trialUsed = await hasFreeTrialBeenUsed();
-        setFreeTrialUsed(trialUsed);
-        console.log('✅ Trial status loaded');
+            const trialUsed = await hasFreeTrialBeenUsed();
+            setFreeTrialUsed(trialUsed);
+            console.log('✅ Trial status loaded');
 
-        // Packages loading
-        console.log('🔄 Loading packages...');
-        const { getSubscriptionPackages } = await import('../services/subscriptionService');
-        const availablePackages = await getSubscriptionPackages();
-        console.log('📦 Packages received:', availablePackages);
-        
-        setPackages(availablePackages);
-        setLoadingPackages(false);
-        console.log('✅ All data loaded, loadingPackages set to false');
+            // Packages loading
+            console.log('🔄 Loading packages...');
+            const { getSubscriptionPackages } = await import('../services/subscriptionService');
+            const availablePackages = await getSubscriptionPackages();
+            console.log('📦 Packages received:', availablePackages);
 
-    } catch (error) {
-        console.error('❌ Error loading paywall data:', error);
-        setLoadingPackages(false); // Error durumunda da false yap
-    }
-};
+            setPackages(availablePackages);
+            setLoadingPackages(false);
+            console.log('✅ All data loaded, loadingPackages set to false');
+
+        } catch (error) {
+            console.error('❌ Error loading paywall data:', error);
+            setLoadingPackages(false); // Error durumunda da false yap
+        }
+    };
 
     const handlePlanChange = (planId: string) => {
         console.log('Paywall - Plan changed to:', planId);
@@ -369,9 +370,10 @@ export default function PaywallScreen() {
                             >
                                 {/* Existing UI elements */}
                                 <Text style={styles.planTitle}>Weekly Plan</Text>
-                                <Text style={styles.planPrice}>{getPackageInfo('weekly').price}</Text>
+                                <Text style={styles.planPrice}>{getPackageInfo('weekly').price} / week</Text>
                                 <Text style={styles.planSubtext}>per week - auto renewable</Text>
                             </TouchableOpacity>
+                                <Text style={styles.noPaymentText}>Subscription automatically renews unless cancel.</Text>
                         </View>
                     )}
 
@@ -439,12 +441,37 @@ export default function PaywallScreen() {
 
 
                     {/* Terms */}
+
                     <View style={styles.termsSection}>
                         <Text style={styles.termsText}>
-                            By continuing, you agree to our Terms of Service and Privacy Policy.
-                            {selectedPlan === 'weekly' && ' Subscription automatically renews unless cancelled.'}
+                            By continuing, you agree to our{" "}
+                            <Text
+                                style={styles.linkText}
+                                onPress={() =>
+                                    Linking.openURL(
+                                        "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                                    )
+                                }
+                            >
+                                Terms of Service
+                            </Text>{" "}
+                            and{"  "}
+                            <Text
+                                style={styles.linkText}
+                                onPress={() =>
+                                    Linking.openURL(
+                                        "https://www.freeprivacypolicy.com/live/d267bff4-586c-40d4-a03f-e425112f455d"
+                                    )
+                                }
+                            >
+                                Privacy Policy
+                            </Text>
+                            .
+                            {selectedPlan === "weekly" &&
+                                ""}
                         </Text>
                     </View>
+
                 </View>
             </ScrollView>
         </SafeAreaView>

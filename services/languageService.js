@@ -121,7 +121,7 @@ export const getUITexts = (languageCode) => {
       resetToDevice: 'Reset to Device Language',
       currentLanguage: 'Current Language',
       // Home Screen
-      appName: 'LandmarAI',
+      appName: 'LandmarkAI',
       discoverHistory: 'Discover History',
       subtitle: 'Explore monuments and landmarks with AI-powered landmarks historical insights',
       takePhoto: 'Take Photo',

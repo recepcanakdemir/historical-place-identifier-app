@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Linking,
   ListRenderItem,
   Modal,
   SafeAreaView,
@@ -31,7 +32,7 @@ export default function SettingsScreen() {
   const [deviceLang, setDeviceLang] = useState<string>('en');
   const [modalVisible, setModalVisible] = useState<boolean>(false);
   const [uiTexts, setUITexts] = useState(getUITexts('en'));
-  
+
   // Premium states with proper types
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
@@ -56,27 +57,27 @@ export default function SettingsScreen() {
   const loadSettings = async (): Promise<void> => {
     try {
       setLoading(true);
-      
+
       // Load language settings
       const current = await getCurrentLanguage();
       const device = getDeviceLanguage();
-      
+
       setCurrentLang(current);
       setDeviceLang(device);
       setUITexts(getUITexts(current));
-      
+
       // Load usage stats with type checking
       const stats = await getUsageStats();
       if (stats && typeof stats === 'object') {
         setUsageStats(stats as UsageStats);
       }
-      
+
       // Load subscription status with type checking
       const subStatus = await checkSubscriptionStatus();
       if (subStatus && typeof subStatus === 'object') {
         setSubscriptionStatus(subStatus as SubscriptionStatus);
       }
-      
+
       console.log('Settings loaded:', { current, device, stats, subStatus });
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -99,7 +100,7 @@ export default function SettingsScreen() {
       setCurrentLang(languageCode);
       setUITexts(getUITexts(languageCode));
       closeLanguageModal();
-      
+
       Alert.alert(
         getUITexts(languageCode).languageChanged,
         getUITexts(languageCode).languageChangedMessage,
@@ -115,7 +116,7 @@ export default function SettingsScreen() {
       const deviceLanguage = await resetToDeviceLanguage();
       setCurrentLang(deviceLanguage);
       setUITexts(getUITexts(deviceLanguage));
-      
+
       Alert.alert(
         getUITexts(deviceLanguage).languageChanged,
         getUITexts(deviceLanguage).languageChangedMessage,
@@ -134,7 +135,7 @@ export default function SettingsScreen() {
     try {
       setLoading(true);
       const result = await restorePurchases();
-      
+
       if (result.success) {
         Alert.alert('Success', result.message);
         // Refresh subscription status with type checking
@@ -215,7 +216,7 @@ export default function SettingsScreen() {
         {/* Premium Status Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Premium Status</Text>
-          
+
           <View style={styles.premiumCard}>
             <View style={styles.premiumHeader}>
               <Text style={styles.premiumTitle}>
@@ -225,7 +226,7 @@ export default function SettingsScreen() {
                 {subscriptionStatus?.isPremium ? 'Unlimited Access' : `${usageStats?.remainingFreeAnalyses || 0} analyses left`}
               </Text>
             </View>
-            
+
             {subscriptionStatus?.isPremium ? (
               <View style={styles.premiumDetails}>
                 <Text style={styles.premiumDetailText}>
@@ -250,7 +251,7 @@ export default function SettingsScreen() {
         {usageStats && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Usage Statistics</Text>
-            
+
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
                 <Text style={styles.statNumber}>{usageStats.totalAnalyses}</Text>
@@ -263,7 +264,7 @@ export default function SettingsScreen() {
                 <Text style={styles.statLabel}>Remaining</Text>
               </View>
             </View>
-            
+
             <Text style={styles.memberSince}>
               Member since: {formatDate(usageStats.memberSince)}
             </Text>
@@ -273,7 +274,7 @@ export default function SettingsScreen() {
         {/* Language Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{uiTexts.language}</Text>
-          
+
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
               <Text style={styles.settingLabel}>{uiTexts.currentLanguage}</Text>
@@ -308,7 +309,7 @@ export default function SettingsScreen() {
         {/* Account Actions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
-          
+
           <TouchableOpacity
             style={styles.settingButton}
             onPress={handleRestorePurchases}
@@ -319,14 +320,43 @@ export default function SettingsScreen() {
             </Text>
             <Text style={styles.arrow}>↻</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity
+
+          {/* <TouchableOpacity
             style={styles.settingButton}
             onPress={handleResetUsage}
           >
             <Text style={[styles.settingButtonText, styles.dangerText]}>Reset Usage Data</Text>
             <Text style={styles.arrow}>⚠️</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>*/}
+
+<View style={styles.section}>
+  <Text style={styles.sectionTitle}>Legal</Text>
+
+  <TouchableOpacity
+    style={styles.settingButton}
+    onPress={() =>
+      Linking.openURL(
+        "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+      )
+    }
+  >
+    <Text style={styles.settingButtonText}>Terms of Use</Text>
+    <Text style={styles.arrow}>›</Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={styles.settingButton}
+    onPress={() =>
+      Linking.openURL(
+        "https://www.freeprivacypolicy.com/live/d267bff4-586c-40d4-a03f-e425112f455d"
+      )
+    }
+  >
+    <Text style={styles.settingButtonText}>Privacy Policy</Text>
+    <Text style={styles.arrow}>›</Text>
+  </TouchableOpacity>
+</View>
+
         </View>
 
         <View style={styles.footer}>
@@ -348,8 +378,8 @@ export default function SettingsScreen() {
         statusBarTranslucent={true}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackground} 
+          <TouchableOpacity
+            style={styles.modalBackground}
             onPress={closeLanguageModal}
             activeOpacity={1}
           />
@@ -363,7 +393,7 @@ export default function SettingsScreen() {
                 <Text style={styles.closeButtonText}>×</Text>
               </TouchableOpacity>
             </View>
-            
+
             <FlatList
               data={languagesToUse}
               renderItem={renderLanguageItem}
@@ -410,7 +440,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 15,
   },
-  
+
   // Premium Status Styles
   premiumCard: {
     marginHorizontal: 20,
@@ -453,7 +483,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  
+
   // Statistics Styles
   statsGrid: {
     flexDirection: 'row',
@@ -487,7 +517,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 20,
   },
-  
+
   // Settings Item Styles
   settingItem: {
     paddingHorizontal: 20,
@@ -547,7 +577,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  
+
   // Modal Styles
   modalOverlay: {
     flex: 1,

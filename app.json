@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "LandmarkAI: Landmark Identifier AI",
+    "name": "LandmarkAI",
     "slug": "HistoricalPlacesFinder",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -18,6 +18,9 @@
     ],
     "ios": {
       "supportsTablet": true,
+      "config":{
+        "usesNonExemptEncryption": false
+      },
       "bundleIdentifier": "com.recapp.landmarkai",
       "splash": {
         "image": "./assets/images/splash-icon.png",
@@ -28,8 +31,7 @@
       "infoPlist": {
         "NSCameraUsageDescription": "LandmarkAI uses the camera to capture photos of landmarks for AI identification and analysis.",
         "NSLocationWhenInUseUsageDescription": "LandmarkAI uses location to provide more accurate landmark identification and historical context.",
-        "NSPhotoLibraryUsageDescription": "LandmarkAI needs access to your photo library to analyze images of landmarks and historical places.",
-        "NSUserTrackingUsageDescription": "LandmarkAI uses tracking to provide personalized experience and improve app performance."
+        "NSPhotoLibraryUsageDescription": "LandmarkAI needs access to your photo library to analyze images of landmarks and historical places."
       },
       "appleTeamId": "9LGCY9Q8N7"
     },

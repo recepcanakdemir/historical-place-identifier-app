@@ -1,16 +1,12 @@
-// services/visionService.js - Debug Version with Enhanced Logging
+// services/visionService.js - Firebase Functions Version
 import { getCurrentLanguage } from './languageService';
 
-// Configuration
-const LLM_CONFIG = {
-  GOOGLE: {
-    apiKey: 'AIzaSyDi-tZX4XDIPIRyIevYEGnyOf-CNs2n_HM',
-    model: 'gemini-2.0-flash',
-    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent'
-  }
+// Configuration - Firebase Functions URL
+const FIREBASE_CONFIG = {
+  FUNCTIONS_URL: 'https://us-central1-landmarkai-55530.cloudfunctions.net/geminiProxy',
+  
+  TIMEOUT: 60000 // 60 saniye timeout
 };
-
-const CURRENT_LLM = 'GOOGLE';
 
 // Helper function to format location for AI
 const formatLocationForAI = (locationData) => {
@@ -55,28 +51,28 @@ const getDemoData = async (locationData = null) => {
   const demoTexts = {
     'tr': {
       name: 'Demo Tarihi Anıt',
-      description: `Bu tarihi bir bina veya anıt gibi görünüyor. ${locationData?.address?.city ? `${locationData.address.city} bölgesinde` : ''} Gerçek analiz için LLM API anahtarınızı yapılandırın. Bu demo, API anahtarı eklediğinizde uygulamanın nasıl çalışacağını gösterir.`,
+      description: `Bu tarihi bir bina veya anıt gibi görünüyor. ${locationData?.address?.city ? `${locationData.address.city} bölgesinde` : ''} Firebase Functions proxy'niz henüz yapılandırılmamış. Bu demo, proxy yapılandırıldığında uygulamanın nasıl çalışacağını gösterir.`,
       location: locationData?.address?.city ? `${locationData.address.city} yakını` : 'Demo Konum',
       yearBuilt: 'Bilinmeyen Dönem',
-      significance: 'Bu demo verisidir. LLM API\'nizi yapılandırdığınızda, gerçek yerler ve anıtlar hakkında detaylı tarihi analiz alacaksınız.',
+      significance: 'Bu demo verisidir. Firebase Functions proxy\'nizi yapılandırdığınızda, gerçek yerler ve anıtlar hakkında detaylı tarihi analiz alacaksınız.',
       architecture: 'Çeşitli Mimari Stiller',
       funFacts: [
         'Bu, uygulama işlevselliğini göstermek için demo veridir',
-        'Konum algılama, AI\'nın daha doğru analiz sağlamasına yardımcı olur',
-        'Uygulama birden fazla LLM görü modelini destekler'
+        'Firebase Functions ile API anahtarınız güvenli kalır',
+        'Konum algılama, AI\'nın daha doğru analiz sağlamasına yardımcı olur'
       ]
     },
     'en': {
       name: 'Demo Historical Monument',
-      description: `This appears to be a historical building or monument. ${locationData?.address?.city ? `Located in ${locationData.address.city} region.` : ''} Configure your LLM API key for real analysis. This demo shows how the app will work once you add your API key.`,
+      description: `This appears to be a historical building or monument. ${locationData?.address?.city ? `Located in ${locationData.address.city} region.` : ''} Your Firebase Functions proxy is not yet configured. This demo shows how the app will work once the proxy is set up.`,
       location: locationData?.address?.city ? `Near ${locationData.address.city}` : 'Demo Location',
       yearBuilt: 'Unknown Period',
-      significance: 'This is demo data. Once you configure your LLM API, you\'ll get detailed historical analysis of real places and monuments.',
+      significance: 'This is demo data. Once you configure your Firebase Functions proxy, you\'ll get detailed historical analysis of real places and monuments.',
       architecture: 'Various Architectural Styles',
       funFacts: [
         'This is demonstration data to show app functionality',
-        'Location detection helps AI provide more accurate analysis',
-        'The app supports multiple LLM vision models'
+        'Firebase Functions keeps your API key secure',
+        'Location detection helps AI provide more accurate analysis'
       ]
     }
   };
@@ -90,12 +86,11 @@ const getDemoData = async (locationData = null) => {
   });
 };
 
-// Google Gemini Implementation with enhanced debugging
-const analyzeWithGemini = async (imageUri, locationData = null) => {
-  console.log('🚀 analyzeWithGemini called with locationData:', locationData);
+// Firebase Functions Implementation with enhanced debugging
+const analyzeWithFirebase = async (imageUri, locationData = null) => {
+  console.log('🚀 analyzeWithFirebase called with locationData:', locationData);
   
   try {
-    const config = LLM_CONFIG.GOOGLE;
     const languageCode = await getSelectedLanguage();
     
     // Format location context safely
@@ -140,9 +135,9 @@ const analyzeWithGemini = async (imageUri, locationData = null) => {
     
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
-        console.error('⏰ Request timeout after 30 seconds');
+        console.error('⏰ Request timeout after 60 seconds');
         reject(new Error('Request timeout'));
-      }, 60000); // 30 second timeout
+      }, FIREBASE_CONFIG.TIMEOUT);
       
       reader.onload = async () => {
         try {
@@ -153,9 +148,10 @@ const analyzeWithGemini = async (imageUri, locationData = null) => {
             throw new Error('Base64 conversion failed');
           }
           
-          console.log('🚀 Sending request to Gemini API in', languageCode);
-          console.log('🌐 API Endpoint:', config.endpoint);
+          console.log('🚀 Sending request to Firebase Functions proxy in', languageCode);
+          console.log('🌐 Firebase Functions URL:', FIREBASE_CONFIG.FUNCTIONS_URL);
           
+          // Firebase Functions için payload - Gemini API format'ında
           const requestPayload = {
             contents: [
               {
@@ -164,8 +160,8 @@ const analyzeWithGemini = async (imageUri, locationData = null) => {
                     text: promptText
                   },
                   {
-                    inline_data: {
-                      mime_type: 'image/jpeg',
+                    inlineData: { // Firebase proxy Gemini format'ını bekliyor
+                      mimeType: 'image/jpeg',
                       data: base64Data
                     }
                   }
@@ -174,43 +170,41 @@ const analyzeWithGemini = async (imageUri, locationData = null) => {
             ]
           };
           
-          console.log('📦 Request payload prepared');
-          console.log('🔑 Using API key (first 10 chars):', config.apiKey.substring(0, 10) + '...');
+          console.log('📦 Request payload prepared for Firebase Functions');
           
           const startTime = Date.now();
           
-          const response = await fetch(`${config.endpoint}?key=${config.apiKey}`, {
+          // Firebase Functions proxy'sine istek gönder
+          const response = await fetch(FIREBASE_CONFIG.FUNCTIONS_URL, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(requestPayload),
-            timeout: 25000 // 25 second fetch timeout
+            body: JSON.stringify(requestPayload)
           });
 
           const endTime = Date.now();
-          console.log('📨 Response received after', endTime - startTime, 'ms');
+          console.log('📨 Firebase Functions response received after', endTime - startTime, 'ms');
           console.log('📊 Response status:', response.status);
-          console.log('📋 Response headers:', Object.fromEntries(response.headers.entries()));
 
           clearTimeout(timeoutId);
 
           if (!response.ok) {
             const errorText = await response.text();
-            console.error('❌ Gemini API error:', response.status, errorText);
-            console.log('🔄 Falling back to demo data due to API error');
+            console.error('❌ Firebase Functions error:', response.status, errorText);
+            console.log('🔄 Falling back to demo data due to Firebase error');
             const demoResult = await getDemoData(locationData);
             resolve(demoResult);
             return;
           }
 
-          console.log('📖 Reading response JSON...');
+          console.log('📖 Reading Firebase Functions response JSON...');
           const result = await response.json();
-          console.log('✅ Gemini API response received in', languageCode);
+          console.log('✅ Firebase Functions response received in', languageCode);
           console.log('📊 Response structure:', Object.keys(result));
           
           if (!result.candidates || !result.candidates[0] || !result.candidates[0].content) {
-            console.error('❌ Invalid Gemini response structure:', result);
+            console.error('❌ Invalid Gemini response structure from Firebase:', result);
             console.log('🔄 Falling back to demo data due to invalid response');
             const demoResult = await getDemoData(locationData);
             resolve(demoResult);
@@ -218,14 +212,14 @@ const analyzeWithGemini = async (imageUri, locationData = null) => {
           }
           
           const content = result.candidates[0].content.parts[0].text;
-          console.log('📖 Content from Gemini (first 200 chars):', content.substring(0, 200) + '...');
+          console.log('📖 Content from Firebase Functions (first 200 chars):', content.substring(0, 200) + '...');
           
           // Try to parse JSON from the response
           try {
             const jsonMatch = content.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
               const parsed = JSON.parse(jsonMatch[0]);
-              console.log('✅ Successfully parsed JSON from Gemini in', languageCode);
+              console.log('✅ Successfully parsed JSON from Firebase Functions in', languageCode);
               resolve(parsed);
               return;
             }
@@ -241,7 +235,7 @@ const analyzeWithGemini = async (imageUri, locationData = null) => {
               yearBuilt: 'See description',
               significance: 'Historical context provided in description',
               architecture: 'See description',
-              funFacts: ['Detailed analysis provided by AI']
+              funFacts: ['Detailed analysis provided by AI via Firebase Functions']
             });
           }
         } catch (fetchError) {
@@ -265,7 +259,7 @@ const analyzeWithGemini = async (imageUri, locationData = null) => {
     });
     
   } catch (error) {
-    console.error('❌ Error in analyzeWithGemini:', error);
+    console.error('❌ Error in analyzeWithFirebase:', error);
     console.log('🔄 Falling back to demo data due to general error');
     return getDemoData(locationData);
   }
@@ -273,26 +267,20 @@ const analyzeWithGemini = async (imageUri, locationData = null) => {
 
 // Main export function
 export const analyzeHistoricalPlace = async (imageUri, locationData = null) => {
-  console.log('🎯 analyzeLandmark called with:');
+  console.log('🎯 analyzeHistoricalPlace called with:');
   console.log('- imageUri:', imageUri ? 'provided' : 'missing');
   console.log('- locationData:', locationData);
+  console.log('- Firebase Functions URL:', FIREBASE_CONFIG.FUNCTIONS_URL);
   
   try {
-    // For demo mode, just return demo data
-    if (CURRENT_LLM === 'DEMO') {
-      console.log('📝 Using demo mode - no API calls');
+    // Check if Firebase Functions URL is configured
+    if (!FIREBASE_CONFIG.FUNCTIONS_URL || FIREBASE_CONFIG.FUNCTIONS_URL.includes('your-project-id')) {
+      console.log('⚠️ Firebase Functions URL not configured - using demo mode');
       return getDemoData(locationData);
     }
 
-    // For Google API
-    if (CURRENT_LLM === 'GOOGLE') {
-      console.log('🤖 Using Google Gemini API');
-      return analyzeWithGemini(imageUri, locationData);
-    }
-
-    // Fallback
-    console.log('🔄 Falling back to demo data');
-    return getDemoData(locationData);
+    console.log('🤖 Using Firebase Functions proxy for Gemini API');
+    return analyzeWithFirebase(imageUri, locationData);
     
   } catch (error) {
     console.error('❌ Error in analyzeHistoricalPlace:', error);
