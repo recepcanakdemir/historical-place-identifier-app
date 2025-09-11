@@ -6,7 +6,7 @@ const USAGE_STORAGE_KEY = 'user_usage_data';
 const PREMIUM_STORAGE_KEY = 'user_premium_status';
 
 // Constants
-const FREE_ANALYSIS_LIMIT = 3;
+const FREE_ANALYSIS_LIMIT = 1;
 
 // Get current usage data
 export const getUserUsage = async () => {

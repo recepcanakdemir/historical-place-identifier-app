@@ -1,6 +1,6 @@
 import { Camera, CameraView } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -13,12 +13,19 @@ import {
   Vibration,
   View,
 } from 'react-native';
+import { getCurrentLocation } from '../services/locationService';
 
 export default function CameraScreen() {
+  const { locationEnabled: locationParam } = useLocalSearchParams<{ locationEnabled?: string }>();
+  
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
   const [facing, setFacing] = useState<'back' | 'front'>('back');
+  const [locationEnabled] = useState<boolean | null>(
+    locationParam ? locationParam === 'true' : null
+  );
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   
   const cameraRef = useRef<CameraView>(null);
   const captureAnimValue = useRef(new Animated.Value(1)).current;
@@ -30,6 +37,16 @@ export default function CameraScreen() {
       setHasPermission(status === 'granted');
     })();
   }, []);
+
+
+  const getLocationWithTimeout = async (timeoutMs: number = 5000): Promise<any> => {
+    return Promise.race([
+      getCurrentLocation(),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Location timeout')), timeoutMs)
+      )
+    ]);
+  };
 
   const takePicture = async () => {
     if (cameraRef.current && !isCapturing) {
@@ -81,9 +98,34 @@ export default function CameraScreen() {
         });
 
         if (photo) {
+          let locationData = null;
+          
+          // Handle location capture based on user preference
+          if (locationEnabled === true) {
+            try {
+              setIsGettingLocation(true);
+              console.log('📍 Capturing location for enhanced analysis...');
+              locationData = await getLocationWithTimeout();
+              console.log('📍 Location captured successfully:', locationData);
+            } catch (error) {
+              console.log('📍 Location capture failed:', error.message);
+            } finally {
+              setIsGettingLocation(false);
+            }
+          } else {
+            console.log('📍 Location disabled by user preference');
+          }
+
+          // Navigate to result with photo and optional location data
+          const params: any = { imageUri: photo.uri };
+          if (locationData) {
+            params.locationData = JSON.stringify(locationData);
+          }
+          
+          console.log('📸 Navigating to result with params:', params);
           router.push({
             pathname: '/result',
-            params: { imageUri: photo.uri }
+            params
           });
         }
       } catch (error) {
@@ -204,6 +246,16 @@ export default function CameraScreen() {
           
           <View style={styles.topCenter}>
             <Text style={styles.modeText}>Photo</Text>
+            {/* Location Status Indicator */}
+            <View style={styles.locationIndicator}>
+              {isGettingLocation ? (
+                <Text style={styles.locationStatus}>📍 Getting location...</Text>
+              ) : locationEnabled === true ? (
+                <Text style={styles.locationStatus}>📍 Location enabled</Text>
+              ) : locationEnabled === false ? (
+                <Text style={styles.locationStatus}>📍 Location disabled</Text>
+              ) : null}
+            </View>
           </View>
           
           <TouchableOpacity 
@@ -270,7 +322,7 @@ export default function CameraScreen() {
         <View style={styles.instructionsContainer}>
           <View style={styles.instructionsBubble}>
             <Text style={styles.instructionsText}>
-              📸 Point at a historical building or monument or a landmark
+              📸 Point at a historical building or monument
             </Text>
           </View>
         </View>
@@ -390,6 +442,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  locationIndicator: {
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 10,
+  },
+  locationStatus: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '500',
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,

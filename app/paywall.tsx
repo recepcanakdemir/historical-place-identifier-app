@@ -71,19 +71,25 @@ export default function PaywallScreen() {
     }, []);
 
     const loadData = async () => {
-        console.log('🔄 loadData starting...');
+        console.log('🔄 Paywall loadData starting...');
         try {
+            console.log('📊 Fetching usage stats...');
             const stats = await getUsageStats();
+            console.log('📈 Usage stats received:', stats);
             setUsageStats(stats);
-            console.log('✅ Stats loaded');
+            console.log('✅ Usage stats set to state');
 
+            console.log('🔐 Fetching subscription status...');
             const subStatus = await checkSubscriptionStatus();
+            console.log('💳 Subscription status received:', subStatus);
             setSubscriptionStatus(subStatus as SubscriptionStatus);
-            console.log('✅ Subscription status loaded');
+            console.log('✅ Subscription status set to state');
 
+            console.log('🎁 Checking trial status...');
             const trialUsed = await hasFreeTrialBeenUsed();
+            console.log('🎯 Trial used status:', trialUsed);
             setFreeTrialUsed(trialUsed);
-            console.log('✅ Trial status loaded');
+            console.log('✅ Trial status set to state');
 
             // Packages loading
             console.log('🔄 Loading packages...');
@@ -93,7 +99,7 @@ export default function PaywallScreen() {
 
             setPackages(availablePackages);
             setLoadingPackages(false);
-            console.log('✅ All data loaded, loadingPackages set to false');
+            console.log('✅ All data loaded successfully');
 
         } catch (error) {
             console.error('❌ Error loading paywall data:', error);
@@ -176,27 +182,82 @@ export default function PaywallScreen() {
         }
     };
 
-    const handleClose = () => {
-        console.log('Paywall - Closing with source:', source);
+    const handleClose = async () => {
+        console.log('🚪 Paywall - handleClose called');
+        console.log('📊 Paywall - Source:', source);
+        console.log('📈 Paywall - Current usageStats state:', usageStats);
+        console.log('🔄 Paywall - loadingPackages:', loadingPackages);
 
-        if (source === 'onboarding') {
-            // Onboarding'den geliyorsa ana sayfaya git
-            console.log('Paywall - Redirecting to main app from onboarding');
-            router.replace('/');
-        } else {
-            // Diğer durumlar - geri gitmeye çalış, hata olursa ana sayfaya git
-            try {
-                if (router.canGoBack()) {
-                    console.log('Paywall - Going back');
-                    router.back();
-                } else {
-                    console.log('Paywall - Cannot go back, redirecting to main app');
-                    router.replace('/');
+        try {
+            // First check current state
+            let canClose = false;
+            let currentUsageStats = usageStats;
+
+            // If usageStats is null or undefined, fetch fresh data
+            if (!currentUsageStats) {
+                console.log('⚠️  Paywall - usageStats is null, fetching fresh data...');
+                try {
+                    currentUsageStats = await getUsageStats();
+                    console.log('✅ Paywall - Fresh usage stats:', currentUsageStats);
+                } catch (error) {
+                    console.error('❌ Paywall - Error fetching fresh usage stats:', error);
+                    // If we can't get stats, let user close as fallback
+                    console.log('🆘 Paywall - Fallback: allowing close due to stats fetch error');
+                    canClose = true;
                 }
-            } catch (error) {
-                console.log('Paywall - Error going back, redirecting to main app:', error);
-                router.replace('/');
             }
+
+            // Check if user has remaining analyses
+            if (currentUsageStats && !canClose) {
+                const remaining = currentUsageStats.remainingFreeAnalyses;
+                const isPremium = currentUsageStats.isPremium;
+                
+                console.log('🔍 Paywall - Analysis check:');
+                console.log('   - Remaining free analyses:', remaining);
+                console.log('   - Is premium:', isPremium);
+                
+                if (isPremium || remaining > 0) {
+                    canClose = true;
+                    console.log('✅ Paywall - User has access, allowing close');
+                } else {
+                    console.log('🚫 Paywall - No remaining analyses and not premium');
+                }
+            }
+
+            // Execute close logic
+            if (canClose) {
+                console.log('🎯 Paywall - Proceeding with close...');
+                
+                if (source === 'onboarding') {
+                    console.log('🏠 Paywall - Redirecting to main app from onboarding');
+                    router.replace('/');
+                } else {
+                    try {
+                        if (router.canGoBack()) {
+                            console.log('⬅️  Paywall - Going back');
+                            router.back();
+                        } else {
+                            console.log('🏠 Paywall - Cannot go back, redirecting to main app');
+                            router.replace('/');
+                        }
+                    } catch (error) {
+                        console.log('❌ Paywall - Error going back, redirecting to main app:', error);
+                        router.replace('/');
+                    }
+                }
+            } else {
+                console.log('🔒 Paywall - Close denied - showing alert');
+                Alert.alert(
+                    'Premium Required',
+                    'You have no free analyses remaining. Please upgrade to premium or purchase a subscription to continue.',
+                    [{ text: 'OK' }]
+                );
+            }
+        } catch (error) {
+            console.error('💥 Paywall - Unexpected error in handleClose:', error);
+            // As final fallback, allow close
+            console.log('🆘 Paywall - Final fallback: allowing close due to unexpected error');
+            router.replace('/');
         }
     };
 
@@ -294,14 +355,12 @@ export default function PaywallScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header - Only show close button if not onboarding */}
-                {source !== 'onboarding' && (
-                    <View style={styles.header}>
-                        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                            <Text style={styles.closeButtonText}>✕</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
+                {/* Header - Always show close button, logic is handled in handleClose */}
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+                        <Text style={styles.closeButtonText}>✕</Text>
+                    </TouchableOpacity>
+                </View>
 
                 {/* Main Content */}
                 <View style={styles.content}>
@@ -381,7 +440,7 @@ export default function PaywallScreen() {
                     {!freeTrialUsed && (
                         <View style={styles.toggleSection}>
                             <View style={styles.toggleRow}>
-                                <Text style={styles.toggleText}>3 Free Analyses Enabled</Text>
+                                <Text style={styles.toggleText}>1 Free Analysis Enabled</Text>
                                 <Switch
                                     value={freeAnalysesEnabled}
                                     onValueChange={handleToggleChange}
@@ -426,7 +485,7 @@ export default function PaywallScreen() {
                                 activeOpacity={0.8}
                             >
                                 <Text style={styles.freeButtonText}>
-                                    {source === 'onboarding' ? 'Start with 3 Free Analyses' : 'Get 3 More Free Analyses'}
+                                    {source === 'onboarding' ? 'Start with 1 Free Analysis' : 'Get 1 Free Analysis'}
                                 </Text>
                             </TouchableOpacity>
                         )}

@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import React, { JSX, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   Modal,
@@ -15,7 +16,7 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { checkAppAccess } from '../services/accessService';
+import { checkAppAccess, getAccessStatus } from '../services/accessService';
 import { getCurrentLanguage, getUITexts } from '../services/languageService';
 import { checkSubscriptionStatus } from '../services/subscriptionService';
 import { getUsageStats } from '../services/usageService';
@@ -83,6 +84,10 @@ export default function HomeScreen() {
     React.useCallback(() => {
       const checkAndRedirect = async () => {
         try {
+          // Debug current access status first
+          console.log('🔍 Index screen - Getting debug access status...');
+          await getAccessStatus();
+          
           // Use new unified access service
           const accessResult = await checkAppAccess();
           console.log('🏠 Index screen - Access result:', accessResult);
@@ -133,9 +138,38 @@ export default function HomeScreen() {
       console.error('Error loading app data:', error);
     }
   };
+  const requestLocationAndOpenCamera = (): Promise<void> => {
+    return new Promise((resolve) => {
+      Alert.alert(
+        'Location for Better Analysis',
+        'Allow location access for more accurate historical place identification?\n\nThis helps our AI provide better context about landmarks near you.',
+        [
+          { 
+            text: 'Skip', 
+            style: 'cancel',
+            onPress: () => {
+              console.log('📍 User skipped location permission');
+              router.push('/camera?locationEnabled=false');
+              resolve();
+            }
+          },
+          { 
+            text: 'Allow', 
+            onPress: () => {
+              console.log('📍 User allowed location permission');
+              router.push('/camera?locationEnabled=true');
+              resolve();
+            }
+          }
+        ],
+        { cancelable: false }
+      );
+    });
+  };
+
   const takePhoto = (): void => {
     closeMenu();
-    setTimeout(() => router.push('/camera'), 100);
+    setTimeout(() => requestLocationAndOpenCamera(), 100);
   };
 
   const pickImage = async (): Promise<void> => {
@@ -228,7 +262,7 @@ export default function HomeScreen() {
           style={styles.upgradeBanner}
           onPress={navigateToPremium}
         >
-          <Text style={styles.upgradeBannerText}>🔒 No free analyses left</Text>
+          <Text style={styles.upgradeBannerText}>🔒 No free analysis left</Text>
           <Text style={styles.upgradeBannerSubtext}>Tap to upgrade to Premium</Text>
         </TouchableOpacity>
       );
@@ -279,12 +313,12 @@ export default function HomeScreen() {
     }
 
     const remaining = Math.max(0, usageStats?.remainingFreeAnalyses || 0);
-    const total = 3;
+    const total = 1;
     const used = Math.max(0, total - remaining);
 
     return (
       <View style={styles.usageIndicator}>
-        <Text style={styles.usageText}>{remaining} of {total} free analyses left</Text>
+        <Text style={styles.usageText}>{remaining} of {total} free analysis left</Text>
         <View style={styles.progressBar}>
           {[...Array(total)].map((_, index) => (
             <View

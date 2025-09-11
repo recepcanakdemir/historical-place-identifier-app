@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SplashScreen from '../components/SplashScreen';
-import { endFreeTrialSession } from '../services/accessService';
 import { initializePurchases } from '../services/subscriptionService';
 
 export default function RootLayout() {
@@ -16,9 +15,8 @@ export default function RootLayout() {
       try {
         console.log('🚀 Initializing app...');
         
-        // Clear free trial session on app restart
-        await endFreeTrialSession();
-        console.log('🧹 Free trial session cleared on app start');
+        // Note: Free trial session should persist across app restarts
+        // Only clear when user actually uses their free analysis
         
         // Initialize subscription service
         await initializePurchases();

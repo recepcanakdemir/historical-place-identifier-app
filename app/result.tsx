@@ -196,7 +196,7 @@ export default function ResultScreen() {
           <Text style={styles.limitModalIcon}>📸</Text>
           <Text style={styles.limitModalTitle}>Analysis Limit Reached</Text>
           <Text style={styles.limitModalSubtitle}>
-            You've used all {usageStats?.totalAnalyses || 3} free analyses!
+            You&apos;ve used your {usageStats?.totalAnalyses || 1} free analysis!
           </Text>
           
           <View style={styles.limitModalFeatures}>
