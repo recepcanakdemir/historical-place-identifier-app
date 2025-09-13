@@ -17,10 +17,13 @@ import {
 import { saveHistoricalPlace } from '../services/storageService';
 import { canPerformAnalysis, getUsageStats, useAnalysis } from '../services/usageService';
 import { analyzeHistoricalPlace } from '../services/visionService';
-import { PlaceInfo, UsageStats } from '../types';
+import { enrichNearbyPlaces, enrichNearbyPlacesWithPlaceId } from '../services/placesService';
+import { PlaceInfo, UsageStats, NearbyPlace } from '../types';
+import { NearbyPlaces } from '../components/NearbyPlaces';
+import { openInMaps } from '../utils/mapUtils';
 
 export default function ResultScreen() {
-  const { imageUri, locationData, savedData, fromSaved, fromGallery } = useLocalSearchParams<{ 
+  const params = useLocalSearchParams<{ 
     imageUri: string;
     locationData?: string;
     savedData?: string;
@@ -28,16 +31,33 @@ export default function ResultScreen() {
     fromGallery?: string;
   }>();
   
+  // Debug params to find any objects
+  console.log('🔍 PARAMS INSPECTION:');
+  Object.keys(params).forEach(key => {
+    const value = params[key];
+    console.log(`  ${key}:`, typeof value, value);
+    if (typeof value === 'object') {
+      console.error(`❌ FOUND OBJECT in params.${key}:`, value);
+    }
+  });
+  
+  const { imageUri, locationData, savedData, fromSaved, fromGallery } = params;
+  
   const [loading, setLoading] = useState(true);
   const [placeInfo, setPlaceInfo] = useState<PlaceInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userLocation, setUserLocation] = useState<string>('');
+  const [currentLocationCoords, setCurrentLocationCoords] = useState<{latitude: number, longitude: number} | null>(null);
   
   // Usage tracking states
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  
+  // Two-phase loading states
+  const [nearbyPlacesEnriching, setNearbyPlacesEnriching] = useState(false);
+  const [enrichmentProgress, setEnrichmentProgress] = useState<{ completed: number; total: number } | null>(null);
 
   useEffect(() => {
     if (fromSaved === 'true' && savedData) {
@@ -58,6 +78,17 @@ export default function ResultScreen() {
       }
       
       const parsed = JSON.parse(savedData);
+      
+      // Fix location object issue for saved data too
+      if (parsed.location && typeof parsed.location === 'object') {
+        console.log('🔧 Converting saved location object to string:', parsed.location);
+        if (parsed.location.latitude && parsed.location.longitude) {
+          parsed.location = `${parsed.location.latitude}, ${parsed.location.longitude}`;
+        } else {
+          parsed.location = 'Location coordinates provided';
+        }
+      }
+      
       setPlaceInfo(parsed);
       setIsSaved(true);
       setUserLocation(parsed.userLocation || '');
@@ -99,6 +130,38 @@ export default function ResultScreen() {
     }
   };
 
+  // Background enrichment function for Phase 2
+  const enrichNearbyPlacesInBackground = async (nearbyPlaces: NearbyPlace[], locationData: any = null) => {
+    try {
+      setNearbyPlacesEnriching(true);
+      setEnrichmentProgress({ completed: 0, total: nearbyPlaces.length });
+      
+      console.log('🔧 Phase 2: Enriching nearby places with Place IDs...');
+      
+      const enrichedPlaces = await enrichNearbyPlacesWithPlaceId(nearbyPlaces, locationData);
+      
+      // Update placeInfo with enriched nearby places
+      setPlaceInfo(prevInfo => {
+        if (!prevInfo) return prevInfo;
+        return {
+          ...prevInfo,
+          nearbyMustSeePlaces: enrichedPlaces.map(place => ({
+            ...place,
+            isEnriched: true
+          }))
+        };
+      });
+      
+      console.log('✅ Phase 2: Places enrichment completed');
+      
+    } catch (error) {
+      console.error('❌ Background enrichment failed:', error);
+    } finally {
+      setNearbyPlacesEnriching(false);
+      setEnrichmentProgress(null);
+    }
+  };
+
   const performAnalysis = async () => {
     try {
       // Parse location data if available AND not from gallery
@@ -110,13 +173,52 @@ export default function ResultScreen() {
                             parsedLocationData.address?.region || 
                             'Location detected';
           setUserLocation(locationStr);
+          
+          // Extract coordinates for map functionality
+          if (parsedLocationData.latitude && parsedLocationData.longitude) {
+            setCurrentLocationCoords({
+              latitude: parsedLocationData.latitude,
+              longitude: parsedLocationData.longitude
+            });
+          }
         } catch (e) {
           console.log('Could not parse location data');
         }
       }
       
       const result = await analyzeHistoricalPlace(imageUri, parsedLocationData);
+      
+      // Phase 1: Show initial results immediately
+      // Fix location object issue before setting state
+      if (result.location && typeof result.location === 'object') {
+        console.log('🔧 Converting location object to string:', result.location);
+        if (result.location.latitude && result.location.longitude) {
+          result.location = `${result.location.latitude}, ${result.location.longitude}`;
+        } else {
+          result.location = 'Location coordinates provided';
+        }
+      }
+      
+      // Set initial place info (without enriched nearby places)
+      if (result.nearbyMustSeePlaces && result.nearbyMustSeePlaces.length > 0) {
+        // Mark places as not enriched initially
+        result.nearbyMustSeePlaces = result.nearbyMustSeePlaces.map(place => ({
+          ...place,
+          latitude: typeof place.latitude === 'number' ? place.latitude : parseFloat(place.latitude) || 0,
+          longitude: typeof place.longitude === 'number' ? place.longitude : parseFloat(place.longitude) || 0,
+          mapsLink: place.latitude && place.longitude 
+            ? `https://www.google.com/maps/@${place.latitude},${place.longitude},15z`
+            : `https://www.google.com/maps/search/${encodeURIComponent(place.name)}`,
+          isEnriched: false
+        }));
+      }
+      
       setPlaceInfo(result);
+      
+      // Phase 2: Enrich nearby places with Place IDs in background
+      if (result.nearbyMustSeePlaces && result.nearbyMustSeePlaces.length > 0) {
+        enrichNearbyPlacesInBackground(result.nearbyMustSeePlaces, parsedLocationData);
+      }
     } catch (err) {
       setError('Failed to analyze the image. Please try again.');
       console.error(err);
@@ -131,10 +233,17 @@ export default function ResultScreen() {
     try {
       setSaving(true);
       
+      // Safely handle location for saving
+      let locationForSaving = placeInfo.location;
+      if (typeof locationForSaving === 'object' && locationForSaving?.latitude && locationForSaving?.longitude) {
+        locationForSaving = `${locationForSaving.latitude}, ${locationForSaving.longitude}`;
+      }
+      
       const dataToSave = {
         ...placeInfo,
+        location: locationForSaving, // Ensure location is a string
         imageUri,
-        userLocation: userLocation || placeInfo.location,
+        userLocation: userLocation || locationForSaving,
         originalLocationData: locationData,
       };
       
@@ -162,7 +271,13 @@ export default function ResultScreen() {
     if (!placeInfo) return;
     
     try {
-      const shareText = `🏛️ ${placeInfo.name}\n\n${placeInfo.description}\n\n📍 ${placeInfo.location}\n\nDiscovered with LandmarkAI app!`;
+      // Safely handle location for sharing
+      let locationText = placeInfo.location;
+      if (typeof locationText === 'object' && locationText?.latitude && locationText?.longitude) {
+        locationText = `${locationText.latitude}, ${locationText.longitude}`;
+      }
+      
+      const shareText = `🏛️ ${placeInfo.name}\n\n${placeInfo.description}\n\n📍 ${locationText}\n\nDiscovered with LandmarkAI app!`;
       
       await Share.share({
         message: shareText,
@@ -170,6 +285,14 @@ export default function ResultScreen() {
       });
     } catch (error) {
       console.error('Error sharing:', error);
+    }
+  };
+
+  const handlePlacePress = async (place: NearbyPlace) => {
+    try {
+      await openInMaps(place, currentLocationCoords || undefined);
+    } catch (error) {
+      console.error('Error opening place in maps:', error);
     }
   };
 
@@ -315,6 +438,25 @@ export default function ResultScreen() {
                     <Text style={styles.funFactText}>{fact}</Text>
                   </View>
                 ))}
+              </View>
+            )}
+            
+            {/* Nearby Places Section */}
+            {placeInfo.nearbyMustSeePlaces && placeInfo.nearbyMustSeePlaces.length > 0 && (
+              <View style={styles.nearbyPlacesContainer}>
+                <View style={styles.nearbyPlacesHeader}>
+                  <Text style={styles.nearbyPlacesTitle}>🗺️ Nearby Must-See Places</Text>
+                  {nearbyPlacesEnriching && (
+                    <View style={styles.enrichmentStatus}>
+                      <ActivityIndicator size="small" color="#4A90E2" />
+                      <Text style={styles.enrichmentText}>Enhancing links...</Text>
+                    </View>
+                  )}
+                </View>
+                <NearbyPlaces 
+                  places={placeInfo.nearbyMustSeePlaces} 
+                  onPlacePress={handlePlacePress}
+                />
               </View>
             )}
             
@@ -645,5 +787,32 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 16,
     fontWeight: '500',
+  },
+  
+  // Nearby Places Styles
+  nearbyPlacesContainer: {
+    marginTop: 25,
+  },
+  nearbyPlacesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 5,
+  },
+  nearbyPlacesTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  enrichmentStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  enrichmentText: {
+    fontSize: 12,
+    color: '#4A90E2',
+    fontStyle: 'italic',
   },
 });

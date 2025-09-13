@@ -33,9 +33,45 @@ const getSelectedLanguage = async () => {
 // Language-specific prompts
 const getLanguagePrompt = (languageCode, locationContext) => {
   const prompts = {
-    'tr': `Sen bir tarih uzmanı ve rehbersin. ${locationContext}Bu görüntüyü dikkatlice analiz et. Eğer görüntüde tarihi yerler, anıtlar, simge yapılar, heykeller veya mimari açıdan önemli binalar varsa, detaylı tarihi bilgi ver. Eğer görüntüde insanlar, modern binalar, doğa veya tarihi olmayan konular varsa, gördüklerini kibarca açıkla ve mümkün olduğunca ilgili tarihi veya kültürel bağlam sağla. Her zaman yardımcı ve eğitici ol. Yanıtını JSON formatında ver: name (isim), description (açıklama), location (konum), yearBuilt (yapım yılı), significance (önemi), architecture (mimari), funFacts (ilginç bilgiler dizisi). TÜRKÇE yanıt ver.`,
+    'tr': `Sen bir tarih uzmanı ve rehbersin. ${locationContext}Bu görüntüyü dikkatlice analiz et. Eğer görüntüde tarihi yerler, anıtlar, simge yapılar, heykeller veya mimari açıdan önemli binalar varsa, detaylı tarihi bilgi ver. Eğer görüntüde insanlar, modern binalar, doğa veya tarihi olmayan konular varsa, gördüklerini kibarca açıkla ve mümkün olduğunca ilgili tarihi veya kültürel bağlam sağla. Her zaman yardımcı ve eğitici ol.
+
+Görüntüde tanıdığın tarihi veya önemli bir yer varsa, bu yerin bulunduğu bölgedeki yakın çevresindeki görülmeye değer 5-8 önemli destinasyonu öner. 
+
+ÖNEMLİ: Yakındaki yerlerin isimlerini İNGİLİZCE ver ve şehir adını da ekle. Örnek:
+- "Maiden's Tower, Istanbul" 
+- "Royal Palace, Warsaw"
+- "Galata Tower, Istanbul"
+
+Önerileriniz:
+- Bu tanıdığın yerin coğrafi yakınındaki (5km çapında) gerçek yerler olmalı
+- Müzeler, tarihi mekanlar, anıtlar, parklar, manzara noktaları ve kültürel önem taşıyan yerler dahil
+- Her önerdiğin yer için kesin ve doğru koordinatlar (enlem ve boylam) sağla
+- Koordinatlar, tanıdığın ana yerin bulunduğu şehir/bölgedeki gerçek yerlerden olmalı
+- Her yer ismini İNGİLİZCE ve şehir/bölge adı ile birlikte ver
+
+Yanıtını JSON formatında ver: name, description, location, yearBuilt, significance, architecture, funFacts (ilginç bilgiler dizisi), nearbyMustSeePlaces (yakındaki görülmeye değer yerler dizisi - her biri için: name (İNGİLİZCE), description, approximateDistance, placeType, latitude, longitude). 
+
+TÜRKÇE yanıt ver.`,
     
-    'en': `You are an expert historian and travel guide. ${locationContext}Analyze this image carefully. If the image contains historical places, monuments, landmarks, statues, or architecturally significant buildings, provide detailed historical information. If the image shows people, modern buildings, nature, or other non-historical subjects, politely explain what you see and provide any relevant historical or cultural context. Always be helpful and educational. Format your response as JSON with fields: name, description, location, yearBuilt, significance, architecture, funFacts (array of strings). Respond in ENGLISH.`,
+    'en': `You are an expert historian and travel guide. ${locationContext}Analyze this image carefully. If the image contains historical places, monuments, landmarks, statues, or architecturally significant buildings, provide detailed historical information. If the image shows people, modern buildings, nature, or other non-historical subjects, politely explain what you see and provide any relevant historical or cultural context. Always be helpful and educational.
+
+If you identify a historical or significant place in the image, suggest 5-8 notable destinations worth visiting in the vicinity of this identified location.
+
+IMPORTANT: When naming nearby places, use ENGLISH names and ALWAYS include the city name. Examples:
+- "Royal Palace, Warsaw"
+- "Tower Bridge, London" 
+- "Galata Tower, Istanbul"
+
+Your recommendations should:
+- Be genuine places located within the geographical proximity (5km radius) of the landmark you identified
+- Include museums, historical sites, monuments, parks, scenic viewpoints, and culturally significant locations
+- Provide precise and accurate coordinates (latitude and longitude) for each suggested place
+- Ensure coordinates correspond to real locations in the same city/region as the identified landmark
+- Use English place names with city/region name included for reliable identification
+
+Format your response as JSON with fields: name, description, location, yearBuilt, significance, architecture, funFacts (array of strings), nearbyMustSeePlaces (array of nearby must-see places - each with: name (in English), description, approximateDistance, placeType, latitude, longitude).
+
+Respond in ENGLISH.`,
   };
   
   // Default to English if language not supported
@@ -60,6 +96,24 @@ const getDemoData = async (locationData = null) => {
         'Bu, uygulama işlevselliğini göstermek için demo veridir',
         'Firebase Functions ile API anahtarınız güvenli kalır',
         'Konum algılama, AI\'nın daha doğru analiz sağlamasına yardımcı olur'
+      ],
+      nearbyMustSeePlaces: [
+        {
+          name: 'Demo Müze',
+          description: 'Firebase Functions yapılandırıldığında gerçek yakın yerler burada görünecek',
+          approximateDistance: '500m yürüyüş',
+          placeType: 'müze',
+          latitude: 41.0082,
+          longitude: 28.9784
+        },
+        {
+          name: 'Demo Tarihi Mekan',
+          description: 'AI gerçek analiz yaptığında yakındaki önemli yerleri önerecek',
+          approximateDistance: '1.2km yürüyüş',
+          placeType: 'tarihi mekan',
+          latitude: 41.0055,
+          longitude: 28.9769
+        }
       ]
     },
     'en': {
@@ -73,6 +127,24 @@ const getDemoData = async (locationData = null) => {
         'This is demonstration data to show app functionality',
         'Firebase Functions keeps your API key secure',
         'Location detection helps AI provide more accurate analysis'
+      ],
+      nearbyMustSeePlaces: [
+        {
+          name: 'Demo Museum',
+          description: 'Real nearby places will appear here when Firebase Functions is configured',
+          approximateDistance: '500m walk',
+          placeType: 'museum',
+          latitude: 41.0082,
+          longitude: 28.9784
+        },
+        {
+          name: 'Demo Historical Site',
+          description: 'AI will suggest actual important nearby places when real analysis is performed',
+          approximateDistance: '1.2km walk',
+          placeType: 'historical site',
+          latitude: 41.0055,
+          longitude: 28.9769
+        }
       ]
     }
   };
@@ -93,14 +165,14 @@ const analyzeWithFirebase = async (imageUri, locationData = null) => {
   try {
     const languageCode = await getSelectedLanguage();
     
-    // Format location context safely
+    // Format location context safely (optional context, not required for nearby suggestions)
     let locationContext = '';
     if (locationData) {
       const formattedLocation = formatLocationForAI(locationData);
       if (formattedLocation) {
         const locationTexts = {
-          'tr': `Fotoğraf şu yerin yakınında çekildi: ${formattedLocation}. Bu konum bağlamını yeri daha doğru tanımlamak için kullan. `,
-          'en': `The photo was taken near: ${formattedLocation}. Use this location context to help identify the place more accurately. `,
+          'tr': `Bu fotoğraf ${formattedLocation} civarında çekildi. Bu bağlam yardımcı olabilir. `,
+          'en': `This photo was taken near ${formattedLocation}. This context may be helpful. `,
         };
         locationContext = locationTexts[languageCode] || locationTexts['en'];
       }
@@ -219,6 +291,18 @@ const analyzeWithFirebase = async (imageUri, locationData = null) => {
             const jsonMatch = content.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
               const parsed = JSON.parse(jsonMatch[0]);
+              
+              // Normalize coordinates in nearby places to ensure they're numbers
+              if (parsed.nearbyMustSeePlaces && Array.isArray(parsed.nearbyMustSeePlaces)) {
+                parsed.nearbyMustSeePlaces = parsed.nearbyMustSeePlaces.map(place => ({
+                  ...place,
+                  latitude: typeof place.latitude === 'number' ? place.latitude : 
+                           typeof place.latitude === 'string' ? parseFloat(place.latitude) : 0,
+                  longitude: typeof place.longitude === 'number' ? place.longitude : 
+                            typeof place.longitude === 'string' ? parseFloat(place.longitude) : 0
+                }));
+              }
+              
               console.log('✅ Successfully parsed JSON from Firebase Functions in', languageCode);
               resolve(parsed);
               return;

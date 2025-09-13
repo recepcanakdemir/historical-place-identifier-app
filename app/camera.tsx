@@ -108,7 +108,7 @@ export default function CameraScreen() {
               locationData = await getLocationWithTimeout();
               console.log('📍 Location captured successfully:', locationData);
             } catch (error) {
-              console.log('📍 Location capture failed:', error.message);
+              console.log('📍 Location capture failed:', error instanceof Error ? error.message : 'Unknown error');
             } finally {
               setIsGettingLocation(false);
             }

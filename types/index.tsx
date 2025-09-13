@@ -1,5 +1,25 @@
 // types/index.ts - Updated Types
 
+export interface NearbyPlace {
+  name: string;
+  description: string;
+  approximateDistance: string;
+  placeType: string;
+  mapsLink: string;    // Primary Google Maps link
+  latitude: number;    // Coordinates (from AI or Places API)
+  longitude: number;   // Coordinates (from AI or Places API)
+  placeId?: string;    // Google Places ID for reliable linking
+  mapsLinks?: {        // Multiple link types for different platforms
+    universal: string;
+    mobileApp: string;
+    appleMaps: string;
+  };
+  address?: string;    // Full address from Places API
+  rating?: number;     // Google rating if available
+  verifiedName?: string; // Verified name from Places API
+  isEnriched?: boolean; // Flag to indicate if Place ID lookup is complete
+}
+
 export interface PlaceInfo {
   name: string;
   description: string;
@@ -8,6 +28,7 @@ export interface PlaceInfo {
   significance?: string;
   architecture?: string;
   funFacts?: string[];
+  nearbyMustSeePlaces?: NearbyPlace[];
   imageUri?: string;
   userLocation?: string;
   savedAt?: string;

@@ -38,7 +38,7 @@ const fetch = require("node-fetch");
 // Global options for cost control
 
 // Gemini API endpoint
-const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
 
 // Firebase proxy function - Updated to use environment variables
 exports.geminiProxy = onRequest(async (req, res) => {
