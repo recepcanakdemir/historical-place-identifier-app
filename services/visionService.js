@@ -246,14 +246,22 @@ const analyzeWithFirebase = async (imageUri, locationData = null) => {
           
           const startTime = Date.now();
           
-          // Firebase Functions proxy'sine istek gönder
+          // Firebase Functions proxy'sine istek gönder (with connection timeout handling)
+          const controller = new AbortController();
+          const connectionTimeoutId = setTimeout(() => {
+            controller.abort();
+          }, 30000); // 30 second connection timeout
+          
           const response = await fetch(FIREBASE_CONFIG.FUNCTIONS_URL, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(requestPayload)
+            body: JSON.stringify(requestPayload),
+            signal: controller.signal
           });
+
+          clearTimeout(connectionTimeoutId);
 
           const endTime = Date.now();
           console.log('📨 Firebase Functions response received after', endTime - startTime, 'ms');
@@ -292,6 +300,19 @@ const analyzeWithFirebase = async (imageUri, locationData = null) => {
             if (jsonMatch) {
               const parsed = JSON.parse(jsonMatch[0]);
               
+              // Validate that the parsed result has required landmark fields
+              if (!parsed.name || typeof parsed.name !== 'string' || 
+                  !parsed.description || typeof parsed.description !== 'string') {
+                console.warn('⚠️ Invalid landmark data structure, falling back to demo');
+                throw new Error('Invalid landmark data - missing required fields');
+              }
+              
+              // Clean up any markdown formatting that may have leaked through
+              if (parsed.description) {
+                parsed.description = parsed.description.replace(/\*([^*]+)\*/g, '$1'); // Remove *italic* 
+                parsed.description = parsed.description.replace(/```[^`]*```/g, ''); // Remove code blocks
+              }
+              
               // Normalize coordinates in nearby places to ensure they're numbers
               if (parsed.nearbyMustSeePlaces && Array.isArray(parsed.nearbyMustSeePlaces)) {
                 parsed.nearbyMustSeePlaces = parsed.nearbyMustSeePlaces.map(place => ({
@@ -303,7 +324,7 @@ const analyzeWithFirebase = async (imageUri, locationData = null) => {
                 }));
               }
               
-              console.log('✅ Successfully parsed JSON from Firebase Functions in', languageCode);
+              console.log('✅ Successfully parsed and validated JSON from Firebase Functions in', languageCode);
               resolve(parsed);
               return;
             }

@@ -31,7 +31,10 @@
       "infoPlist": {
         "NSCameraUsageDescription": "LandmarkAI uses the camera to capture photos of landmarks for AI identification and analysis.",
         "NSLocationWhenInUseUsageDescription": "LandmarkAI uses location to provide more accurate landmark identification and historical context.",
-        "NSPhotoLibraryUsageDescription": "LandmarkAI needs access to your photo library to analyze images of landmarks and historical places."
+        "NSPhotoLibraryUsageDescription": "LandmarkAI needs access to your photo library to analyze images of landmarks and historical places.",
+        "NSPhotoLibraryAddUsageDescription": "LandmarkAI may save analyzed landmark photos to your library for your reference.",
+        "NSMicrophoneUsageDescription": "LandmarkAI may use microphone for enhanced user experience features.",
+        "NSMotionUsageDescription": "LandmarkAI uses motion sensors to enhance location-based landmark identification."
       },
       "appleTeamId": "9LGCY9Q8N7"
     },

@@ -1,6 +1,18 @@
 // services/placesService.js - Google Places API Integration
 import Constants from 'expo-constants';
 
+// Safe coordinate parsing to prevent NaN values that cause CoreGraphics errors
+const safeParseCoordinate = (value) => {
+  if (typeof value === 'number') {
+    return isNaN(value) ? 0 : value;
+  }
+  if (value === null || value === undefined || value === '') {
+    return 0;
+  }
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 // Configuration
 const PLACES_CONFIG = {
   API_KEY: Constants.expoConfig?.extra?.googlePlacesApiKey || '',
@@ -19,8 +31,8 @@ console.log('🔑 Google Places API key status:', {
 const createMapsUrl = (placeId, placeName, latitude, longitude) => {
   // If coordinates available, use coordinate-based link (more reliable)
   if (latitude && longitude) {
-    const lat = typeof latitude === 'number' ? latitude : parseFloat(latitude);
-    const lng = typeof longitude === 'number' ? longitude : parseFloat(longitude);
+    const lat = safeParseCoordinate(latitude);
+    const lng = safeParseCoordinate(longitude);
     const safeName = encodeURIComponent(placeName || 'Location');
     return `https://maps.google.com/@${lat},${lng},17z`;
   }
@@ -109,8 +121,8 @@ export const enrichNearbyPlaces = async (nearbyPlaces, currentLocation = null) =
     return nearbyPlaces.map(place => ({
       ...place,
       // Ensure coordinates are numbers, not objects
-      latitude: typeof place.latitude === 'number' ? place.latitude : parseFloat(place.latitude) || 0,
-      longitude: typeof place.longitude === 'number' ? place.longitude : parseFloat(place.longitude) || 0,
+      latitude: safeParseCoordinate(place.latitude),
+      longitude: safeParseCoordinate(place.longitude),
       mapsLink: place.latitude && place.longitude 
         ? `https://www.google.com/maps/@${place.latitude},${place.longitude},15z`
         : `https://www.google.com/maps/search/${encodeURIComponent(place.name)}`
@@ -191,8 +203,8 @@ export const enrichNearbyPlaces = async (nearbyPlaces, currentLocation = null) =
       return {
         ...originalPlace,
         // Ensure coordinates are numbers, not objects
-        latitude: typeof originalPlace.latitude === 'number' ? originalPlace.latitude : parseFloat(originalPlace.latitude) || 0,
-        longitude: typeof originalPlace.longitude === 'number' ? originalPlace.longitude : parseFloat(originalPlace.longitude) || 0,
+        latitude: safeParseCoordinate(originalPlace.latitude),
+        longitude: safeParseCoordinate(originalPlace.longitude),
         mapsLink: originalPlace.latitude && originalPlace.longitude 
           ? `https://www.google.com/maps/@${originalPlace.latitude},${originalPlace.longitude},15z`
           : `https://www.google.com/maps/search/${encodeURIComponent(originalPlace.name)}`
@@ -299,8 +311,8 @@ export const getPlaceIdFromName = async (placeName, city = null) => {
 // Helper function to create reliable coordinate-based map links (like successful iOS apps)
 const createMapsLinkFromCoordinates = (placeName, latitude, longitude) => {
   // Ensure coordinates are valid numbers
-  const lat = typeof latitude === 'number' ? latitude : parseFloat(latitude) || 0;
-  const lng = typeof longitude === 'number' ? longitude : parseFloat(longitude) || 0;
+  const lat = safeParseCoordinate(latitude);
+  const lng = safeParseCoordinate(longitude);
   const safeName = encodeURIComponent(placeName || 'Location');
   
   return {
@@ -330,8 +342,8 @@ export const enrichNearbyPlacesWithPlaceId = async (nearbyPlaces, currentLocatio
     console.warn('⚠️ Google Places API key not configured - using fallback coordinates');
     return nearbyPlaces.map(place => ({
       ...place,
-      latitude: typeof place.latitude === 'number' ? place.latitude : parseFloat(place.latitude) || 0,
-      longitude: typeof place.longitude === 'number' ? place.longitude : parseFloat(place.longitude) || 0,
+      latitude: safeParseCoordinate(place.latitude),
+      longitude: safeParseCoordinate(place.longitude),
       mapsLink: place.latitude && place.longitude 
         ? `https://www.google.com/maps/@${place.latitude},${place.longitude},15z`
         : `https://www.google.com/maps/search/${encodeURIComponent(place.name)}`
@@ -356,8 +368,8 @@ export const enrichNearbyPlacesWithPlaceId = async (nearbyPlaces, currentLocatio
           // Use verified coordinates from Places API (more precise than AI coordinates)
           const placesApiLat = placeData.location?.lat;
           const placesApiLng = placeData.location?.lng;
-          const aiLat = typeof place.latitude === 'number' ? place.latitude : parseFloat(place.latitude) || 0;
-          const aiLng = typeof place.longitude === 'number' ? place.longitude : parseFloat(place.longitude) || 0;
+          const aiLat = safeParseCoordinate(place.latitude);
+          const aiLng = safeParseCoordinate(place.longitude);
           
           const finalLat = placesApiLat || aiLat;
           const finalLng = placesApiLng || aiLng;
@@ -383,8 +395,8 @@ export const enrichNearbyPlacesWithPlaceId = async (nearbyPlaces, currentLocatio
           };
         } else {
           // Fallback to coordinate-based links using AI coordinates
-          const fallbackLat = typeof place.latitude === 'number' ? place.latitude : parseFloat(place.latitude) || 0;
-          const fallbackLng = typeof place.longitude === 'number' ? place.longitude : parseFloat(place.longitude) || 0;
+          const fallbackLat = safeParseCoordinate(place.latitude);
+          const fallbackLng = safeParseCoordinate(place.longitude);
           
           if (fallbackLat && fallbackLng) {
             const coordinateLinks = createMapsLinkFromCoordinates(place.name, fallbackLat, fallbackLng);
@@ -433,8 +445,8 @@ export const enrichNearbyPlacesWithPlaceId = async (nearbyPlaces, currentLocatio
       console.warn(`⚠️ Failed to enrich place: ${originalPlace.name}`, result.reason);
       return {
         ...originalPlace,
-        latitude: typeof originalPlace.latitude === 'number' ? originalPlace.latitude : parseFloat(originalPlace.latitude) || 0,
-        longitude: typeof originalPlace.longitude === 'number' ? originalPlace.longitude : parseFloat(originalPlace.longitude) || 0,
+        latitude: safeParseCoordinate(originalPlace.latitude),
+        longitude: safeParseCoordinate(originalPlace.longitude),
         mapsLink: originalPlace.latitude && originalPlace.longitude 
           ? `https://www.google.com/maps/@${originalPlace.latitude},${originalPlace.longitude},15z`
           : `https://www.google.com/maps/search/${encodeURIComponent(originalPlace.name)}`

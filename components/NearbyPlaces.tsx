@@ -103,6 +103,14 @@ export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPl
             region={getMapRegion()}
             showsUserLocation={true}
             showsMyLocationButton={true}
+            onMapReady={() => console.log('🗺️ Map loaded successfully')}
+            onError={(error) => {
+              console.warn('⚠️ Map error (non-critical):', error);
+              // Don't crash the app - map errors are often non-critical
+            }}
+            loadingEnabled={true}
+            loadingIndicatorColor="#4A90E2"
+            loadingBackgroundColor="rgba(255,255,255,0.8)"
           >
             {places
               .filter(place => place.latitude && place.longitude && place.latitude !== 0 && place.longitude !== 0)

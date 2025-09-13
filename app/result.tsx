@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  InteractionManager,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -20,7 +21,9 @@ import { analyzeHistoricalPlace } from '../services/visionService';
 import { enrichNearbyPlaces, enrichNearbyPlacesWithPlaceId } from '../services/placesService';
 import { PlaceInfo, UsageStats, NearbyPlace } from '../types';
 import { NearbyPlaces } from '../components/NearbyPlaces';
+import { ChatModal } from '../components/ChatModal';
 import { openInMaps } from '../utils/mapUtils';
+import { isChatServiceAvailable } from '../services/chatService';
 
 export default function ResultScreen() {
   const params = useLocalSearchParams<{ 
@@ -58,6 +61,9 @@ export default function ResultScreen() {
   // Two-phase loading states
   const [nearbyPlacesEnriching, setNearbyPlacesEnriching] = useState(false);
   const [enrichmentProgress, setEnrichmentProgress] = useState<{ completed: number; total: number } | null>(null);
+  
+  // Chat modal state
+  const [showChatModal, setShowChatModal] = useState(false);
 
   useEffect(() => {
     if (fromSaved === 'true' && savedData) {
@@ -133,32 +139,42 @@ export default function ResultScreen() {
   // Background enrichment function for Phase 2
   const enrichNearbyPlacesInBackground = async (nearbyPlaces: NearbyPlace[], locationData: any = null) => {
     try {
+      // Batch state updates for better performance
       setNearbyPlacesEnriching(true);
       setEnrichmentProgress({ completed: 0, total: nearbyPlaces.length });
       
       console.log('🔧 Phase 2: Enriching nearby places with Place IDs...');
       
-      const enrichedPlaces = await enrichNearbyPlacesWithPlaceId(nearbyPlaces, locationData);
+      // Add small delay to prevent blocking UI
+      await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Update placeInfo with enriched nearby places
-      setPlaceInfo(prevInfo => {
-        if (!prevInfo) return prevInfo;
-        return {
-          ...prevInfo,
-          nearbyMustSeePlaces: enrichedPlaces.map(place => ({
-            ...place,
-            isEnriched: true
-          }))
-        };
-      });
+      const enrichedPlaces = await enrichNearbyPlacesWithPlaceId(nearbyPlaces, locationData);
       
       console.log('✅ Phase 2: Places enrichment completed');
       
+      // Batch all final state updates together
+      requestAnimationFrame(() => {
+        setPlaceInfo(prevInfo => {
+          if (!prevInfo) return prevInfo;
+          return {
+            ...prevInfo,
+            nearbyMustSeePlaces: enrichedPlaces.map(place => ({
+              ...place,
+              isEnriched: true
+            }))
+          };
+        });
+        setNearbyPlacesEnriching(false);
+        setEnrichmentProgress(null);
+      });
+      
     } catch (error) {
       console.error('❌ Background enrichment failed:', error);
-    } finally {
-      setNearbyPlacesEnriching(false);
-      setEnrichmentProgress(null);
+      // Ensure state is cleaned up even on error
+      requestAnimationFrame(() => {
+        setNearbyPlacesEnriching(false);
+        setEnrichmentProgress(null);
+      });
     }
   };
 
@@ -204,8 +220,10 @@ export default function ResultScreen() {
         // Mark places as not enriched initially
         result.nearbyMustSeePlaces = result.nearbyMustSeePlaces.map(place => ({
           ...place,
-          latitude: typeof place.latitude === 'number' ? place.latitude : parseFloat(place.latitude) || 0,
-          longitude: typeof place.longitude === 'number' ? place.longitude : parseFloat(place.longitude) || 0,
+          latitude: typeof place.latitude === 'number' && !isNaN(place.latitude) ? place.latitude : 
+                   (typeof place.latitude === 'string' && !isNaN(parseFloat(place.latitude))) ? parseFloat(place.latitude) : 0,
+          longitude: typeof place.longitude === 'number' && !isNaN(place.longitude) ? place.longitude : 
+                    (typeof place.longitude === 'string' && !isNaN(parseFloat(place.longitude))) ? parseFloat(place.longitude) : 0,
           mapsLink: place.latitude && place.longitude 
             ? `https://www.google.com/maps/@${place.latitude},${place.longitude},15z`
             : `https://www.google.com/maps/search/${encodeURIComponent(place.name)}`,
@@ -215,9 +233,11 @@ export default function ResultScreen() {
       
       setPlaceInfo(result);
       
-      // Phase 2: Enrich nearby places with Place IDs in background
+      // Phase 2: Enrich nearby places with Place IDs in background (deferred for performance)
       if (result.nearbyMustSeePlaces && result.nearbyMustSeePlaces.length > 0) {
-        enrichNearbyPlacesInBackground(result.nearbyMustSeePlaces, parsedLocationData);
+        InteractionManager.runAfterInteractions(() => {
+          enrichNearbyPlacesInBackground(result.nearbyMustSeePlaces, parsedLocationData);
+        });
       }
     } catch (err) {
       setError('Failed to analyze the image. Please try again.');
@@ -488,6 +508,16 @@ export default function ResultScreen() {
               >
                 <Text style={styles.shareButtonText}>📤 Share Discovery</Text>
               </TouchableOpacity>
+              
+              {/* Ask AI Chat Button */}
+              {placeInfo && isChatServiceAvailable() && (
+                <TouchableOpacity 
+                  style={styles.chatButton}
+                  onPress={() => setShowChatModal(true)}
+                >
+                  <Text style={styles.chatButtonText}>🤖 Ask AI</Text>
+                </TouchableOpacity>
+              )}
             </View>
             
             {fromSaved === 'true' && (
@@ -504,6 +534,15 @@ export default function ResultScreen() {
       
       {/* Limit Reached Modal */}
       <LimitReachedModal />
+      
+      {/* Chat Modal */}
+      {placeInfo && (
+        <ChatModal
+          visible={showChatModal}
+          landmarkInfo={placeInfo}
+          onClose={() => setShowChatModal(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -695,6 +734,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shareButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  chatButton: {
+    backgroundColor: '#9b59b6',
+    padding: 15,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+  },
+  chatButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
