@@ -1,57 +1,178 @@
-// app/index.tsx - Fixed Animation Version
-import React, { useState, useRef, useEffect } from 'react';
+// app/index.tsx - Updated with New Pricing Logic
+import { useFocusEffect } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
+import React, { JSX, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Image,
-  Modal,
+  Alert,
   Animated,
   Dimensions,
-  StatusBar,
-  Platform,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { router } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from '@react-navigation/native';
+import { checkAppAccess, getAccessStatus } from '../services/accessService';
 import { getCurrentLanguage, getUITexts } from '../services/languageService';
+import { checkSubscriptionStatus } from '../services/subscriptionService';
+import { getUsageStats } from '../services/usageService';
+import { SubscriptionStatus, UsageStats } from '../types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [currentLang, setCurrentLang] = useState('en');
+  const [menuVisible, setMenuVisible] = useState<boolean>(false);
+  const [currentLang, setCurrentLang] = useState<string>('en');
   const [uiTexts, setUITexts] = useState(getUITexts('en'));
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
+  const [trialInfo, setTrialInfo] = useState<any>(null);
   const slideAnim = useRef(new Animated.Value(-280)).current;
   const insets = useSafeAreaInsets();
 
-  // Load language when screen focuses
-  useFocusEffect(
-    React.useCallback(() => {
-      loadLanguage();
-    }, [])
-  );
-
-  const loadLanguage = async () => {
+  // Helper function to check trial status
+  const checkTrialStatus = async () => {
     try {
-      const language = await getCurrentLanguage();
-      setCurrentLang(language);
-      setUITexts(getUITexts(language));
-      console.log('Home screen language loaded:', language);
+      const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+      
+      const trialActive = await AsyncStorage.getItem('trial_active');
+      const trialEndDate = await AsyncStorage.getItem('trial_end_date');
+      
+      if (trialActive === 'true' && trialEndDate) {
+        const endDate = new Date(trialEndDate);
+        const now = new Date();
+        
+        if (now < endDate) {
+          return {
+            isActive: true,
+            endDate: trialEndDate,
+            daysRemaining: Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          };
+        } else {
+          // Trial expired
+          await AsyncStorage.setItem('trial_active', 'false');
+          return {
+            isActive: false,
+            endDate: trialEndDate,
+            daysRemaining: 0
+          };
+        }
+      }
+      
+      return {
+        isActive: false,
+        endDate: null,
+        daysRemaining: 0
+      };
+      
     } catch (error) {
-      console.error('Error loading language:', error);
+      console.error('Error checking trial status:', error);
+      return {
+        isActive: false,
+        endDate: null,
+        daysRemaining: 0
+      };
     }
   };
 
-  const takePhoto = () => {
-    closeMenu();
-    setTimeout(() => router.push('/camera'), 100);
+  // Check if should redirect to paywall
+  useFocusEffect(
+    React.useCallback(() => {
+      const checkAndRedirect = async () => {
+        try {
+          // Debug current access status first
+          console.log('🔍 Index screen - Getting debug access status...');
+          await getAccessStatus();
+          
+          // Use new unified access service
+          const accessResult = await checkAppAccess();
+          console.log('🏠 Index screen - Access result:', accessResult);
+          
+          if (!accessResult.hasAccess && accessResult.shouldShowPaywall) {
+            const source = accessResult.paywallSource || 'upgrade';
+            console.log(`🎯 Redirecting to paywall with source: ${source}`);
+            router.replace(`/paywall?source=${source}`);
+            return;
+          }
+          
+          // If has access, load normal data
+          console.log('✅ User can access main app');
+          loadAppData();
+          
+        } catch (error) {
+          console.error('❌ Error checking access status:', error);
+          // On error, load app normally
+          loadAppData();
+        }
+      };
+      
+      checkAndRedirect();
+    }, [])
+  );
+
+  const loadAppData = async (): Promise<void> => {
+    try {
+      // Load language
+      const language = await getCurrentLanguage();
+      setCurrentLang(language);
+      setUITexts(getUITexts(language));
+      
+      // Load usage stats
+      const stats = await getUsageStats();
+      setUsageStats(stats);
+      
+      // Load subscription status
+      const subStatus = await checkSubscriptionStatus();
+      setSubscriptionStatus(subStatus as SubscriptionStatus);
+      
+      // Load trial info
+      const trial = await checkTrialStatus();
+      setTrialInfo(trial);
+      
+      console.log('🏠 Home screen data loaded:', { language, stats, subStatus, trial });
+    } catch (error) {
+      console.error('Error loading app data:', error);
+    }
+  };
+  const requestLocationAndOpenCamera = (): Promise<void> => {
+    return new Promise((resolve) => {
+      Alert.alert(
+        'Location for Better Analysis',
+        'Allow location access for more accurate historical place identification?\n\nThis helps our AI provide better context about landmarks near you.',
+        [
+          { 
+            text: 'Skip', 
+            style: 'cancel',
+            onPress: () => {
+              console.log('📍 User skipped location permission');
+              router.push('/camera?locationEnabled=false');
+              resolve();
+            }
+          },
+          { 
+            text: 'Allow', 
+            onPress: () => {
+              console.log('📍 User allowed location permission');
+              router.push('/camera?locationEnabled=true');
+              resolve();
+            }
+          }
+        ],
+        { cancelable: false }
+      );
+    });
   };
 
-  const pickImage = async () => {
+  const takePhoto = (): void => {
+    closeMenu();
+    setTimeout(() => requestLocationAndOpenCamera(), 100);
+  };
+
+  const pickImage = async (): Promise<void> => {
     closeMenu();
     setTimeout(async () => {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -73,7 +194,7 @@ export default function HomeScreen() {
     }, 100);
   };
 
-  const openMenu = () => {
+  const openMenu = (): void => {
     setMenuVisible(true);
     Animated.timing(slideAnim, {
       toValue: 0,
@@ -82,7 +203,7 @@ export default function HomeScreen() {
     }).start();
   };
 
-  const closeMenu = () => {
+  const closeMenu = (): void => {
     Animated.timing(slideAnim, {
       toValue: -280,
       duration: 250,
@@ -92,14 +213,125 @@ export default function HomeScreen() {
     });
   };
 
-  const navigateToSaved = () => {
+  const navigateToSaved = (): void => {
     closeMenu();
     setTimeout(() => router.push('/saved'), 200);
   };
 
-  const navigateToSettings = () => {
+  const navigateToSettings = (): void => {
     closeMenu();
     setTimeout(() => router.push('/settings'), 200);
+  };
+
+  const navigateToPremium = (): void => {
+    closeMenu();
+    setTimeout(() => router.push('/paywall?source=upgrade'), 200);
+  };
+
+  const renderPremiumBanner = (): JSX.Element | null => {
+    // Check if user is premium
+    if (subscriptionStatus?.isPremium || usageStats?.isPremium) {
+      const planType = subscriptionStatus?.planType || 'premium';
+      return (
+        <View style={styles.premiumActiveBanner}>
+          <Text style={styles.premiumActiveText}>
+            ✨ {planType === 'lifetime' ? 'Lifetime Premium' : 'Premium Active'}
+          </Text>
+          <Text style={styles.premiumActiveSubtext}>Unlimited analyses</Text>
+        </View>
+      );
+    }
+
+    // Check if trial is active
+    if (trialInfo?.isActive) {
+      return (
+        <View style={styles.trialBanner}>
+          <Text style={styles.trialBannerText}>🎁 Free Trial Active</Text>
+          <Text style={styles.trialBannerSubtext}>
+            {trialInfo.daysRemaining} day{trialInfo.daysRemaining !== 1 ? 's' : ''} remaining
+          </Text>
+        </View>
+      );
+    }
+
+    const remaining = Math.max(0, usageStats?.remainingFreeAnalyses || 0);
+
+    if (remaining === 0) {
+      return (
+        <TouchableOpacity 
+          style={styles.upgradeBanner}
+          onPress={navigateToPremium}
+        >
+          <Text style={styles.upgradeBannerText}>🔒 No free analysis left</Text>
+          <Text style={styles.upgradeBannerSubtext}>Tap to upgrade to Premium</Text>
+        </TouchableOpacity>
+      );
+    }
+
+    if (remaining <= 1) {
+      return (
+        <View style={styles.warningBanner}>
+          <Text style={styles.warningBannerText}>⚡ {remaining} free analysis left</Text>
+          <TouchableOpacity 
+            style={styles.miniUpgradeButton}
+            onPress={navigateToPremium}
+          >
+            <Text style={styles.miniUpgradeText}>Upgrade</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  const renderUsageIndicator = (): JSX.Element => {
+    // First check subscription status, then usage stats
+    if (subscriptionStatus?.isPremium || usageStats?.isPremium) {
+      const planType = subscriptionStatus?.planType || 'premium';
+      return (
+        <View style={styles.usageIndicator}>
+          <Text style={styles.usageText}>
+            ∞ {planType === 'lifetime' ? 'Lifetime Access' : 'Unlimited Access'}
+          </Text>
+        </View>
+      );
+    }
+
+    // Check if trial is active
+    if (trialInfo?.isActive) {
+      return (
+        <View style={styles.usageIndicator}>
+          <Text style={styles.usageText}>🎁 Free Trial Active</Text>
+          <View style={styles.trialProgress}>
+            <Text style={styles.trialProgressText}>
+              {trialInfo.daysRemaining} day{trialInfo.daysRemaining !== 1 ? 's' : ''} remaining
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    const remaining = Math.max(0, usageStats?.remainingFreeAnalyses || 0);
+    const total = 1;
+    const used = Math.max(0, total - remaining);
+
+    return (
+      <View style={styles.usageIndicator}>
+        <Text style={styles.usageText}>{remaining} of {total} free analysis left</Text>
+        <View style={styles.progressBar}>
+          {[...Array(total)].map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.progressDot,
+                index < used ? styles.progressDotUsed : styles.progressDotRemaining
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -111,12 +343,19 @@ export default function HomeScreen() {
           <View style={styles.hamburgerLine} />
           <View style={styles.hamburgerLine} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{uiTexts.appName || 'Historical Places'}</Text>
+        <Text style={styles.headerTitle}>{uiTexts.appName || 'LandmarkAI'}</Text>
         <View style={styles.headerPlaceholder} />
       </View>
 
-      {/* Main Content */}
-      <View style={styles.content}>
+      {/* Premium/Usage Banner */}
+      {renderPremiumBanner()}
+
+      {/* Main Content with ScrollView */}
+      <ScrollView 
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
         <View style={styles.logoContainer}>
           <View style={styles.logoBackground}>
             <Text style={styles.logoEmoji}>🏛️</Text>
@@ -127,6 +366,9 @@ export default function HomeScreen() {
         <Text style={styles.subtitle}>
           {uiTexts.subtitle || 'Explore monuments and landmarks with AI-powered historical insights'}
         </Text>
+
+        {/* Usage Indicator */}
+        {renderUsageIndicator()}
 
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.primaryButton} onPress={takePhoto}>
@@ -164,7 +406,7 @@ export default function HomeScreen() {
             <Text style={styles.featureText}>{uiTexts.saveDiscoveries || 'Save your discoveries'}</Text>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Hamburger Menu Modal */}
       {menuVisible && (
@@ -187,7 +429,7 @@ export default function HomeScreen() {
                 styles.menuContainer,
                 { 
                   transform: [{ translateX: slideAnim }],
-                  paddingTop: insets.top, // iPhone çentik için
+                  paddingTop: insets.top,
                 }
               ]}
             >
@@ -199,6 +441,26 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.menuItems}>
+                {/* Premium Status in Menu */}
+                <View style={styles.menuPremiumStatus}>
+                  {subscriptionStatus?.isPremium ? (
+                    <Text style={styles.menuPremiumActiveText}>
+                      ✨ {subscriptionStatus.planType === 'lifetime' ? 'Lifetime' : 'Premium'} Member
+                    </Text>
+                  ) : trialInfo?.isActive ? (
+                    <Text style={styles.menuTrialActiveText}>
+                      🎁 Free Trial ({trialInfo.daysRemaining} days left)
+                    </Text>
+                  ) : (
+                    <TouchableOpacity 
+                      style={styles.menuUpgradeButton}
+                      onPress={navigateToPremium}
+                    >
+                      <Text style={styles.menuUpgradeText}>⭐ Upgrade to Premium</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
                 <TouchableOpacity style={styles.menuItem} onPress={navigateToSaved}>
                   <Text style={styles.menuIcon}>💾</Text>
                   <Text style={styles.menuItemText}>Saved Places</Text>
@@ -211,11 +473,24 @@ export default function HomeScreen() {
                   <Text style={styles.menuArrow}>›</Text>
                 </TouchableOpacity>
 
+                {!subscriptionStatus?.isPremium && (
+                  <TouchableOpacity style={styles.menuItem} onPress={navigateToPremium}>
+                    <Text style={styles.menuIcon}>⭐</Text>
+                    <Text style={styles.menuItemText}>Premium</Text>
+                    <Text style={styles.menuArrow}>›</Text>
+                  </TouchableOpacity>
+                )}
+
                 <View style={styles.menuDivider} />
 
                 <View style={styles.menuFooter}>
-                  <Text style={styles.menuFooterText}>Historical Place Finder</Text>
+                  <Text style={styles.menuFooterText}>LandmarkAI</Text>
                   <Text style={styles.menuFooterSubtext}>v1.0.0</Text>
+                  {usageStats && (
+                    <Text style={styles.menuFooterUsage}>
+                      {usageStats.totalAnalyses} total analyses
+                    </Text>
+                  )}
                 </View>
               </View>
             </Animated.View>
@@ -264,10 +539,88 @@ const styles = StyleSheet.create({
   headerPlaceholder: {
     width: 30,
   },
+  
+  // Premium/Trial Banners
+  premiumActiveBanner: {
+    backgroundColor: '#4A90E2',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  premiumActiveText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  premiumActiveSubtext: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  trialBanner: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  trialBannerText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  trialBannerSubtext: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  upgradeBanner: {
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  upgradeBannerText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  upgradeBannerSubtext: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  warningBanner: {
+    backgroundColor: '#FFA500',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  warningBannerText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  miniUpgradeButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  miniUpgradeText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
   content: {
     flex: 1,
+  },
+  scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 40,
+    paddingBottom: 40,
   },
   logoContainer: {
     alignItems: 'center',
@@ -300,10 +653,57 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 20,
     lineHeight: 24,
     paddingHorizontal: 20,
   },
+  
+  // Usage Indicator
+  usageIndicator: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 30,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  usageText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  trialProgress: {
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  trialProgressText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
+  },
+  progressBar: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  progressDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+  },
+  progressDotUsed: {
+    backgroundColor: '#FF6B6B',
+  },
+  progressDotRemaining: {
+    backgroundColor: '#4A90E2',
+  },
+  
   buttonContainer: {
     gap: 20,
     marginBottom: 40,
@@ -376,7 +776,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   
-  // Modal styles
+  // Modal and Menu styles (keeping existing styles)
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -428,6 +828,34 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 20,
   },
+  menuPremiumStatus: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    alignItems: 'center',
+  },
+  menuPremiumActiveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4A90E2',
+  },
+  menuTrialActiveText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#4CAF50',
+  },
+  menuUpgradeButton: {
+    backgroundColor: '#FF6B6B',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  menuUpgradeText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -471,6 +899,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   menuFooterSubtext: {
+    fontSize: 12,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  menuFooterUsage: {
     fontSize: 12,
     color: '#999',
     textAlign: 'center',

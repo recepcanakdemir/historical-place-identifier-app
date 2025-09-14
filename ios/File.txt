@@ -1,0 +1,82 @@
+[RevenueCat] ⚠️ RevenueCat SDK is configured correctly, but contains some issues you might want to address
+
+Warnings:
+  • Your products are configured in RevenueCat but aren't approved in App Store Connect yet. This prevents users from making purchases in production. Please ensure all products are approved and available for sale in App Store Connect.
+  • The offerings 'default' have configuration issues that may prevent users from seeing product options or making purchases.
+
+Product Issues:
+  ⚠️ com.recapp.landmarkai.weekly_premium (LandmarkAI Weekly Premium): This product's status (READY_TO_SUBMIT) requires you to take action in App Store Connect before using it in production purchases.
+  ⚠️ com.recapp.landmarkai.lifetime_premium (LandmarkAI Lifetime Premium): This product's status (READY_TO_SUBMIT) requires you to take action in App Store Connect before using it in production purchases.
+
+
+Offering Issues:
+  ⚠️ default
+    ⚠️ $rc_weekly (com.recapp.landmarkai.weekly_premium): This product's status (READY_TO_SUBMIT) requires you to take action in App Store Connect before using it in production purchases.
+    ⚠️ $rc_lifetime (com.recapp.landmarkai.lifetime_premium): This product's status (READY_TO_SUBMIT) requires you to take action in App Store Connect before using it in production purchases.
+tcp_input [C10.1.1.1:3] flags=[R] seq=1312425622, ack=0, win=0 state=LAST_ACK rcv_nxt=1312425622, snd_una=4090427066
+tcp_input [C10.1.1.1:3] flags=[R] seq=1312425622, ack=0, win=0 state=CLOSED rcv_nxt=1312425622, snd_una=4090427066
+tcp_input [C10.1.1.1:3] flags=[R] seq=1312425622, ack=0, win=0 state=CLOSED rcv_nxt=1312425622, snd_una=4090427066
+'Paywall - Attempting to purchase:', 'weekly'
+Attempting to purchase plan: weekly
+'Paywall render - source:', 'onboarding', 'selectedPlan:', 'weekly', 'freeAnalysesEnabled:', true, 'freeTrialUsed:', false
+[RevenueCat] ℹ️ No cached Offerings, fetching from network
+[RevenueCat] ℹ️ Offerings cache is stale, updating from network in foreground
+[RevenueCat] ℹ️ GetOfferingsOperation: Started
+[RevenueCat] ℹ️ There are no requests currently running, starting request GET /v1/subscribers/$RCAnonymousID%3A376a39509809433fbdcafde97e40954b/offerings
+[RevenueCat] ℹ️ API request started: GET '/v1/subscribers/$RCAnonymousID%3A376a39509809433fbdcafde97e40954b/offerings'
+[RevenueCat] ℹ️ API request completed: GET '/v1/subscribers/$RCAnonymousID%3A376a39509809433fbdcafde97e40954b/offerings' (304)
+[RevenueCat] ℹ️ No existing products cached, starting store products request for: ["com.recapp.landmarkai.weekly_premium", "com.recapp.landmarkai.lifetime_premium"]
+[RevenueCat] ℹ️ GetOfferingsOperation: Finished
+[RevenueCat] ℹ️ Serial request done: GET /v1/subscribers/$RCAnonymousID%3A376a39509809433fbdcafde97e40954b/offerings, 0 requests left in the queue
+[RevenueCat] 😻 Store products request received response
+[RevenueCat] ℹ️ Store products request finished
+[RevenueCat] 🍎‼️ Error fetching offerings - The operation couldn’t be completed. (RevenueCat.OfferingsManager.Error error 1.)
+There's a problem with your configuration. None of the products registered in the RevenueCat dashboard could be fetched from App Store Connect (or the StoreKit Configuration file if one is being used). 
+More information: https://rev.cat/why-are-offerings-empty
+[RevenueCat] 😿‼️ There is an issue with your configuration. Check the underlying error for more details. There's a problem with your configuration. None of the products registered in the RevenueCat dashboard could be fetched from App Store Connect (or the StoreKit Configuration file if one is being used). 
+More information: https://rev.cat/why-are-offerings-empty
+'Purchase error:', { [Error: There is an issue with your configuration. Check the underlying error for more details. There's a problem with your configuration. None of the products registered in the RevenueCat dashboard could be fetched from App Store Connect (or the StoreKit Configuration file if one is being used). 
+More information: https://rev.cat/why-are-offerings-empty]
+  code: '23',
+  nativeStackIOS: 
+   [ '0   HistoricalPlacesFinder.debug.dylib  0x000000010ab4a748 RCTJSErrorFromCodeMessageAndNSError + 100',
+     '1   HistoricalPlacesFinder.debug.dylib  0x000000010aedfbe8 ___ZZN8facebook5react15ObjCTurboModule13createPromiseERNS_3jsi7RuntimeENSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEU13block_pointerFvU13block_pointerFvP11objc_objectEU13block_pointerFvP8NSStringSH_P7NSErrorEEENK3$_0clES4_RKNS2_5ValueEPSQ_m_block_invoke.112 + 344',
+     '2   HistoricalPlacesFinder.debug.dylib  0x000000010a815edc -[RNPurchases rejectPromiseWithBlock:error:] + 224',
+     '3   HistoricalPlacesFinder.debug.dylib  0x000000010a8160d0 __60-[RNPurchases getResponseCompletionBlockWithResolve:reject:]_block_invoke + 96',
+     '4   HistoricalPlacesFinder.debug.dylib  0x000000010a76475c $sSo12NSDictionaryCSg21PurchasesHybridCommon14ErrorContainerCSgIeyByy_SDySSypGSgAGIeggg_TR + 156',
+     '5   HistoricalPlacesFinder.debug.dylib  0x000000010a767e1c $s21PurchasesHybridCommon0C13FunctionalityC12getOfferings10completionyySDySSypGSg_AA14ErrorContainerCSgtc_tFZy10RevenueCat0F0CSg_So7NSErrorCSgtcfU_ + 328',
+     '6   HistoricalPlacesFinder.debug.dylib  0x000000010a767f30 $s10RevenueCat9OfferingsCSgSo7NSErrorCSgIeggg_AdGIeyByy_TR + 96',
+     '7   HistoricalPlacesFinder.debug.dylib  0x000000010b8a23c8 $s10RevenueCat9OfferingsCSgSo7NSErrorCSgIeyByy_AdGIeggg_TR + 44',
+     '8   HistoricalPlacesFinder.debug.dylib  0x000000010b8a2524 $s10RevenueCat9PurchasesC12getOfferings11fetchPolicy0F7Current10completionyAA0E7ManagerC05FetchG0O_SbyAA0E0CSg_So7NSErrorCSgtctFys6ResultOyAmI5ErrorOGYbScMYccfU_ + 336',
+     '9   HistoricalPlacesFinder.debug.dylib  0x000000010b67be40 $s10RevenueCat16OfferingsManagerC9offerings9appUserID11fetchPolicy0I7Current16trackDiagnostics10completionySS_AC05FetchJ0OS2bys6ResultOyAA0C0CAC5ErrorOGYbScMYccSgtFySbYbcfU_yAMyAA0cP4DataVAQGYbScMYccfU0_ + 1244',
+     '10  HistoricalPlacesFinder.debug.dylib  0x000000010b67f98c $s10RevenueCat16OfferingsManagerC40dispatchCompletionOnMainThreadIfPossible33_300C64EA6BC993F29E3F0EA2F717773FLL_5valueyyxYbScMYccSg_xtlFyyYbScMYccfU_ + 84',
+     '11  HistoricalPlacesFinder.debug.dylib  0x000000010b6d5f40 $s10RevenueCat19OperationDispatcherC19dispatchOnMainActoryyyyYbScMYccFZyyYaScMYccfU_TY0_ + 68',
+     '12  HistoricalPlacesFinder.debug.dylib  0x000000010b6d6059 $s10RevenueCat19OperationDispatcherC19dispatchOnMainActoryyyyYbScMYccFZyyYaScMYccfU_TATQ0_ + 1',
+     '13  HistoricalPlacesFinder.debug.dylib  0x000000010a498d59 $sxIeAgHr_xs5Error_pIegHrzo_s8SendableRzs5NeverORs_r0_lTRTQ0_ + 1',
+     '14  HistoricalPlacesFinder.debug.dylib  0x000000010a498eb5 $sxIeAgHr_xs5Error_pIegHrzo_s8SendableRzs5NeverORs_r0_lTRTATQ0_ + 1',
+     '15  libswift_Concurrency.dylib          0x000000019a147e39 B4CA1325-80CD-3D06-937C-00C53AD9F2AA + 433721' ],
+  domain: 'RevenueCat.ErrorCode',
+  userInfo: 
+   { readableErrorCode: 'CONFIGURATION_ERROR',
+     rc_root_error: 
+      { localizedDescription: 'There is an issue with your configuration. Check the underlying error for more details. There\'s a problem with your configuration. None of the products registered in the RevenueCat dashboard could be fetched from App Store Connect (or the StoreKit Configuration file if one is being used). \nMore information: https://rev.cat/why-are-offerings-empty',
+        domain: 'RevenueCat.ErrorCode',
+        code: 23 },
+     source_function: 'createErrorForEmptyResult(_:showSimulatorWarning:)',
+     source_file: 'RevenueCat/OfferingsManager.swift:309',
+     readable_error_code: 'CONFIGURATION_ERROR',
+     NSLocalizedDescription: 'There is an issue with your configuration. Check the underlying error for more details. There\'s a problem with your configuration. None of the products registered in the RevenueCat dashboard could be fetched from App Store Connect (or the StoreKit Configuration file if one is being used). \nMore information: https://rev.cat/why-are-offerings-empty' } }
+'Paywall render - source:', 'onboarding', 'selectedPlan:', 'weekly', 'freeAnalysesEnabled:', true, 'freeTrialUsed:', false
+'Paywall - Plan changed to:', 'lifetime'
+'Paywall render - source:', 'onboarding', 'selectedPlan:', 'lifetime', 'freeAnalysesEnabled:', false, 'freeTrialUsed:', false
+'Paywall - Plan changed to:', 'weekly'
+'Paywall render - source:', 'onboarding', 'selectedPlan:', 'weekly', 'freeAnalysesEnabled:', true, 'freeTrialUsed:', false
+'Paywall - Plan changed to:', 'lifetime'
+'Paywall render - source:', 'onboarding', 'selectedPlan:', 'lifetime', 'freeAnalysesEnabled:', false, 'freeTrialUsed:', false
+'Paywall - Plan changed to:', 'weekly'
+'Paywall render - source:', 'onboarding', 'selectedPlan:', 'weekly', 'freeAnalysesEnabled:', true, 'freeTrialUsed:', false
+'Paywall - Toggle changed to:', false
+'Paywall render - source:', 'onboarding', 'selectedPlan:', 'weekly', 'freeAnalysesEnabled:', false, 'freeTrialUsed:', false
+'Paywall - Toggle changed to:', true
+'Paywall render - source:', 'onboarding', 'selectedPlan:', 'weekly', 'freeAnalysesEnabled:', true, 'freeTrialUsed:', false
+I0826 17:43:37.148172 1817325568 UIManagerBinding.cpp:135] instanceHandle is null, event of type topMomentumScrollEnd will be dropped

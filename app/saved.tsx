@@ -1,18 +1,18 @@
 // app/saved.tsx
-import React, { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  Image,
-  Alert,
-} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { getSavedPlaces, deleteSavedPlace } from '../services/storageService';
+import React, { useCallback, useState } from 'react';
+import {
+  Alert,
+  FlatList,
+  Image,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { deleteSavedPlace, getSavedPlaces } from '../services/storageService';
 
 export default function SavedScreen() {
   const [savedPlaces, setSavedPlaces] = useState([]);
@@ -101,7 +101,7 @@ export default function SavedScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Saved Historical Places</Text>
+        <Text style={styles.title}>Saved Landmarks</Text>
         <Text style={styles.subtitle}>{savedPlaces.length} places saved</Text>
       </View>
 
@@ -110,7 +110,7 @@ export default function SavedScreen() {
           <Text style={styles.emptyIcon}>🏛️</Text>
           <Text style={styles.emptyTitle}>No saved places yet</Text>
           <Text style={styles.emptySubtitle}>
-            Take photos of historical places and save them for later!
+            Take photos of landmarks places and save them for later!
           </Text>
           <TouchableOpacity
             style={styles.exploreButton}

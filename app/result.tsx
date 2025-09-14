@@ -1,33 +1,32 @@
-// app/result.tsx - Complete with Save Feature
-import React, { useState, useEffect } from 'react';
+// app/result.tsx - Updated with Paywall Integration
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   Alert,
+  Image,
+  InteractionManager,
+  Modal,
+  SafeAreaView,
+  ScrollView,
   Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
-import { analyzeHistoricalPlace } from '../services/visionService';
 import { saveHistoricalPlace } from '../services/storageService';
-
-interface PlaceInfo {
-  name: string;
-  description: string;
-  location?: string;
-  yearBuilt?: string;
-  significance?: string;
-  architecture?: string;
-  funFacts?: string[];
-}
+import { canPerformAnalysis, getUsageStats, useAnalysis } from '../services/usageService';
+import { analyzeHistoricalPlace } from '../services/visionService';
+import { enrichNearbyPlaces, enrichNearbyPlacesWithPlaceId } from '../services/placesService';
+import { PlaceInfo, UsageStats, NearbyPlace } from '../types';
+import { NearbyPlaces } from '../components/NearbyPlaces';
+import { ChatModal } from '../components/ChatModal';
+import { openInMaps } from '../utils/mapUtils';
+import { isChatServiceAvailable } from '../services/chatService';
 
 export default function ResultScreen() {
-  const { imageUri, locationData, savedData, fromSaved, fromGallery } = useLocalSearchParams<{ 
+  const params = useLocalSearchParams<{ 
     imageUri: string;
     locationData?: string;
     savedData?: string;
@@ -35,55 +34,211 @@ export default function ResultScreen() {
     fromGallery?: string;
   }>();
   
+  // Debug params to find any objects
+  console.log('🔍 PARAMS INSPECTION:');
+  Object.keys(params).forEach(key => {
+    const value = params[key];
+    console.log(`  ${key}:`, typeof value, value);
+    if (typeof value === 'object') {
+      console.error(`❌ FOUND OBJECT in params.${key}:`, value);
+    }
+  });
+  
+  const { imageUri, locationData, savedData, fromSaved, fromGallery } = params;
+  
   const [loading, setLoading] = useState(true);
   const [placeInfo, setPlaceInfo] = useState<PlaceInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userLocation, setUserLocation] = useState<string>('');
+  const [currentLocationCoords, setCurrentLocationCoords] = useState<{latitude: number, longitude: number} | null>(null);
+  
+  // Usage tracking states
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  
+  // Two-phase loading states
+  const [nearbyPlacesEnriching, setNearbyPlacesEnriching] = useState(false);
+  const [enrichmentProgress, setEnrichmentProgress] = useState<{ completed: number; total: number } | null>(null);
+  
+  // Chat modal state
+  const [showChatModal, setShowChatModal] = useState(false);
 
   useEffect(() => {
     if (fromSaved === 'true' && savedData) {
-      // Load from saved data
-      try {
-        const parsed = JSON.parse(savedData);
-        setPlaceInfo(parsed);
-        setIsSaved(true);
-        setUserLocation(parsed.userLocation || '');
-        setLoading(false);
-      } catch (error) {
-        console.error('Error parsing saved data:', error);
-        setError('Failed to load saved data');
-        setLoading(false);
-      }
+      // Load from saved data - no limit check needed
+      loadSavedData();
     } else if (imageUri) {
-      // Analyze new image
-      analyzePlaceFromImage();
+      // New analysis - check limits first
+      checkLimitsAndAnalyze();
     }
   }, [imageUri, savedData, fromSaved]);
 
-  const analyzePlaceFromImage = async () => {
+  const loadSavedData = () => {
+    try {
+      if (!savedData) {
+        setError('No saved data provided');
+        setLoading(false);
+        return;
+      }
+      
+      const parsed = JSON.parse(savedData);
+      
+      // Fix location object issue for saved data too
+      if (parsed.location && typeof parsed.location === 'object') {
+        console.log('🔧 Converting saved location object to string:', parsed.location);
+        if (parsed.location.latitude && parsed.location.longitude) {
+          parsed.location = `${parsed.location.latitude}, ${parsed.location.longitude}`;
+        } else {
+          parsed.location = 'Location coordinates provided';
+        }
+      }
+      
+      setPlaceInfo(parsed);
+      setIsSaved(true);
+      setUserLocation(parsed.userLocation || '');
+      setLoading(false);
+    } catch (error) {
+      console.error('Error parsing saved data:', error);
+      setError('Failed to load saved data');
+      setLoading(false);
+    }
+  };
+
+  const checkLimitsAndAnalyze = async () => {
     try {
       setLoading(true);
       
+      // Check if user can perform analysis
+      const canAnalyze = await canPerformAnalysis();
+      
+      if (!canAnalyze.canAnalyze) {
+        // User has reached limit - show upgrade modal
+        const stats = await getUsageStats();
+        setUsageStats(stats);
+        setShowLimitModal(true);
+        setLoading(false);
+        return;
+      }
+      
+      // User can analyze - proceed
+      await performAnalysis();
+      
+      // After successful analysis, use one analysis credit
+      const result = await useAnalysis();
+      console.log('Analysis used, remaining:', result.remainingAnalyses);
+      
+    } catch (error) {
+      console.error('Error in limit check:', error);
+      setError('Failed to check usage limits');
+      setLoading(false);
+    }
+  };
+
+  // Background enrichment function for Phase 2
+  const enrichNearbyPlacesInBackground = async (nearbyPlaces: NearbyPlace[], locationData: any = null) => {
+    try {
+      // Batch state updates for better performance
+      setNearbyPlacesEnriching(true);
+      setEnrichmentProgress({ completed: 0, total: nearbyPlaces.length });
+      
+      console.log('🔧 Phase 2: Enriching nearby places with Place IDs...');
+      
+      // Add small delay to prevent blocking UI
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      const enrichedPlaces = await enrichNearbyPlacesWithPlaceId(nearbyPlaces, locationData);
+      
+      console.log('✅ Phase 2: Places enrichment completed');
+      
+      // Batch all final state updates together
+      requestAnimationFrame(() => {
+        setPlaceInfo(prevInfo => {
+          if (!prevInfo) return prevInfo;
+          return {
+            ...prevInfo,
+            nearbyMustSeePlaces: enrichedPlaces.map(place => ({
+              ...place,
+              isEnriched: true
+            }))
+          };
+        });
+        setNearbyPlacesEnriching(false);
+        setEnrichmentProgress(null);
+      });
+      
+    } catch (error) {
+      console.error('❌ Background enrichment failed:', error);
+      // Ensure state is cleaned up even on error
+      requestAnimationFrame(() => {
+        setNearbyPlacesEnriching(false);
+        setEnrichmentProgress(null);
+      });
+    }
+  };
+
+  const performAnalysis = async () => {
+    try {
       // Parse location data if available AND not from gallery
       let parsedLocationData = null;
       if (locationData && fromGallery !== 'true') {
         try {
           parsedLocationData = JSON.parse(locationData);
-          // Simple format for display
           const locationStr = parsedLocationData.address?.city || 
                             parsedLocationData.address?.region || 
                             'Location detected';
           setUserLocation(locationStr);
+          
+          // Extract coordinates for map functionality
+          if (parsedLocationData.latitude && parsedLocationData.longitude) {
+            setCurrentLocationCoords({
+              latitude: parsedLocationData.latitude,
+              longitude: parsedLocationData.longitude
+            });
+          }
         } catch (e) {
           console.log('Could not parse location data');
         }
       }
       
-      // Galeriden gelen fotoğraflar için konum bilgisi gönderilmez
       const result = await analyzeHistoricalPlace(imageUri, parsedLocationData);
+      
+      // Phase 1: Show initial results immediately
+      // Fix location object issue before setting state
+      if (result.location && typeof result.location === 'object') {
+        console.log('🔧 Converting location object to string:', result.location);
+        if (result.location.latitude && result.location.longitude) {
+          result.location = `${result.location.latitude}, ${result.location.longitude}`;
+        } else {
+          result.location = 'Location coordinates provided';
+        }
+      }
+      
+      // Set initial place info (without enriched nearby places)
+      if (result.nearbyMustSeePlaces && result.nearbyMustSeePlaces.length > 0) {
+        // Mark places as not enriched initially
+        result.nearbyMustSeePlaces = result.nearbyMustSeePlaces.map(place => ({
+          ...place,
+          latitude: typeof place.latitude === 'number' && !isNaN(place.latitude) ? place.latitude : 
+                   (typeof place.latitude === 'string' && !isNaN(parseFloat(place.latitude))) ? parseFloat(place.latitude) : 0,
+          longitude: typeof place.longitude === 'number' && !isNaN(place.longitude) ? place.longitude : 
+                    (typeof place.longitude === 'string' && !isNaN(parseFloat(place.longitude))) ? parseFloat(place.longitude) : 0,
+          mapsLink: place.latitude && place.longitude 
+            ? `https://www.google.com/maps/@${place.latitude},${place.longitude},15z`
+            : `https://www.google.com/maps/search/${encodeURIComponent(place.name)}`,
+          isEnriched: false
+        }));
+      }
+      
       setPlaceInfo(result);
+      
+      // Phase 2: Enrich nearby places with Place IDs in background (deferred for performance)
+      if (result.nearbyMustSeePlaces && result.nearbyMustSeePlaces.length > 0) {
+        InteractionManager.runAfterInteractions(() => {
+          enrichNearbyPlacesInBackground(result.nearbyMustSeePlaces, parsedLocationData);
+        });
+      }
     } catch (err) {
       setError('Failed to analyze the image. Please try again.');
       console.error(err);
@@ -98,10 +253,17 @@ export default function ResultScreen() {
     try {
       setSaving(true);
       
+      // Safely handle location for saving
+      let locationForSaving = placeInfo.location;
+      if (typeof locationForSaving === 'object' && locationForSaving?.latitude && locationForSaving?.longitude) {
+        locationForSaving = `${locationForSaving.latitude}, ${locationForSaving.longitude}`;
+      }
+      
       const dataToSave = {
         ...placeInfo,
+        location: locationForSaving, // Ensure location is a string
         imageUri,
-        userLocation: userLocation || placeInfo.location,
+        userLocation: userLocation || locationForSaving,
         originalLocationData: locationData,
       };
       
@@ -110,7 +272,7 @@ export default function ResultScreen() {
       
       Alert.alert(
         'Saved!',
-        'This historical place has been saved to your collection.',
+        'This landmark has been saved to your collection.',
         [{ text: 'OK' }]
       );
     } catch (error) {
@@ -129,7 +291,13 @@ export default function ResultScreen() {
     if (!placeInfo) return;
     
     try {
-      const shareText = `🏛️ ${placeInfo.name}\n\n${placeInfo.description}\n\n📍 ${placeInfo.location}\n\nDiscovered with Historical Place Finder app!`;
+      // Safely handle location for sharing
+      let locationText = placeInfo.location;
+      if (typeof locationText === 'object' && locationText?.latitude && locationText?.longitude) {
+        locationText = `${locationText.latitude}, ${locationText.longitude}`;
+      }
+      
+      const shareText = `🏛️ ${placeInfo.name}\n\n${placeInfo.description}\n\n📍 ${locationText}\n\nDiscovered with LandmarkAI app!`;
       
       await Share.share({
         message: shareText,
@@ -140,9 +308,66 @@ export default function ResultScreen() {
     }
   };
 
-  const tryAgain = () => {
+  const handlePlacePress = async (place: NearbyPlace) => {
+    try {
+      await openInMaps(place, currentLocationCoords || undefined);
+    } catch (error) {
+      console.error('Error opening place in maps:', error);
+    }
+  };
+
+  const handleUpgradeToPremium = () => {
+    setShowLimitModal(false);
+    // Navigate to paywall screen with limit source
+    router.push('/paywall?source=limit');
+  };
+
+  const handleTryAgain = () => {
     router.back();
   };
+
+  // Limit Modal Component
+  const LimitReachedModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={showLimitModal}
+      onRequestClose={() => setShowLimitModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.limitModalContent}>
+          <Text style={styles.limitModalIcon}>📸</Text>
+          <Text style={styles.limitModalTitle}>Analysis Limit Reached</Text>
+          <Text style={styles.limitModalSubtitle}>
+            You&apos;ve used your {usageStats?.totalAnalyses || 1} free analysis!
+          </Text>
+          
+          <View style={styles.limitModalFeatures}>
+            <Text style={styles.featureTitle}>Upgrade to Premium for:</Text>
+            <Text style={styles.featureItem}>✨ Unlimited analyses</Text>
+            <Text style={styles.featureItem}>🚀 Priority AI processing</Text>
+            <Text style={styles.featureItem}>💾 Advanced saving features</Text>
+          </View>
+          
+          <View style={styles.limitModalButtons}>
+            <TouchableOpacity 
+              style={styles.upgradeButton}
+              onPress={handleUpgradeToPremium}
+            >
+              <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={handleTryAgain}
+            >
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   if (!imageUri) {
     return (
@@ -157,14 +382,14 @@ export default function ResultScreen() {
       <ScrollView style={styles.scrollView}>
         <Image source={{ uri: imageUri }} style={styles.image} />
         
-        {/* Konum banner'ı sadece kameradan çekilen fotoğraflar için göster */}
+        {/* Location banner - only for camera photos */}
         {userLocation && fromGallery !== 'true' && (
           <View style={styles.locationBanner}>
             <Text style={styles.locationBannerText}>📍 {userLocation}</Text>
           </View>
         )}
         
-        {/* Galeri fotoğrafları için bilgi banner'ı */}
+        {/* Gallery banner */}
         {fromGallery === 'true' && (
           <View style={styles.galleryBanner}>
             <Text style={styles.galleryBannerText}>🖼️ Analyzed from gallery image</Text>
@@ -183,7 +408,7 @@ export default function ResultScreen() {
         {error && (
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={tryAgain}>
+            <TouchableOpacity style={styles.retryButton} onPress={handleTryAgain}>
               <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
@@ -204,7 +429,7 @@ export default function ResultScreen() {
               
               {placeInfo.yearBuilt && (
                 <View style={styles.detailCard}>
-                  <Text style={styles.detailLabel}>🏗️ Built</Text>
+                  <Text style={styles.detailLabel}>🗓️ Built</Text>
                   <Text style={styles.detailValue}>{placeInfo.yearBuilt}</Text>
                 </View>
               )}
@@ -236,6 +461,25 @@ export default function ResultScreen() {
               </View>
             )}
             
+            {/* Nearby Places Section */}
+            {placeInfo.nearbyMustSeePlaces && placeInfo.nearbyMustSeePlaces.length > 0 && (
+              <View style={styles.nearbyPlacesContainer}>
+                <View style={styles.nearbyPlacesHeader}>
+                  <Text style={styles.nearbyPlacesTitle}>🗺️ Nearby Must-See Places</Text>
+                  {nearbyPlacesEnriching && (
+                    <View style={styles.enrichmentStatus}>
+                      <ActivityIndicator size="small" color="#4A90E2" />
+                      <Text style={styles.enrichmentText}>Enhancing links...</Text>
+                    </View>
+                  )}
+                </View>
+                <NearbyPlaces 
+                  places={placeInfo.nearbyMustSeePlaces} 
+                  onPlacePress={handlePlacePress}
+                />
+              </View>
+            )}
+            
             {/* Action Buttons */}
             <View style={styles.actionButtons}>
               {fromSaved !== 'true' && (
@@ -264,6 +508,16 @@ export default function ResultScreen() {
               >
                 <Text style={styles.shareButtonText}>📤 Share Discovery</Text>
               </TouchableOpacity>
+              
+              {/* Ask AI Chat Button */}
+              {placeInfo && isChatServiceAvailable() && (
+                <TouchableOpacity 
+                  style={styles.chatButton}
+                  onPress={() => setShowChatModal(true)}
+                >
+                  <Text style={styles.chatButtonText}>🤖 Ask AI</Text>
+                </TouchableOpacity>
+              )}
             </View>
             
             {fromSaved === 'true' && (
@@ -277,6 +531,18 @@ export default function ResultScreen() {
           </View>
         )}
       </ScrollView>
+      
+      {/* Limit Reached Modal */}
+      <LimitReachedModal />
+      
+      {/* Chat Modal */}
+      {placeInfo && (
+        <ChatModal
+          visible={showChatModal}
+          landmarkInfo={placeInfo}
+          onClose={() => setShowChatModal(false)}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -472,6 +738,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  chatButton: {
+    backgroundColor: '#9b59b6',
+    padding: 15,
+    borderRadius: 8,
+    flex: 1,
+    alignItems: 'center',
+  },
+  chatButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
   viewSavedButton: {
     backgroundColor: '#6C5CE7',
     padding: 15,
@@ -483,5 +761,109 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  limitModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 350,
+  },
+  limitModalIcon: {
+    fontSize: 64,
+    marginBottom: 20,
+  },
+  limitModalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  limitModalSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  limitModalFeatures: {
+    width: '100%',
+    marginBottom: 30,
+  },
+  featureTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 15,
+    textAlign: 'center',
+  },
+  featureItem: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  limitModalButtons: {
+    width: '100%',
+    gap: 10,
+  },
+  upgradeButton: {
+    backgroundColor: '#4A90E2',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  upgradeButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  backButton: {
+    backgroundColor: '#f0f0f0',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#666',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  
+  // Nearby Places Styles
+  nearbyPlacesContainer: {
+    marginTop: 25,
+  },
+  nearbyPlacesHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 5,
+  },
+  nearbyPlacesTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+  },
+  enrichmentStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  enrichmentText: {
+    fontSize: 12,
+    color: '#4A90E2',
+    fontStyle: 'italic',
   },
 });
