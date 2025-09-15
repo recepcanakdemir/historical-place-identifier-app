@@ -2,10 +2,12 @@
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import React, { JSX, useState } from 'react';
+import React, { JSX, useState, useRef, useEffect } from 'react';
 import {
   Alert,
+  Animated,
   Dimensions,
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -28,6 +30,13 @@ export default function HomeScreen() {
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [trialInfo, setTrialInfo] = useState<any>(null);
+  
+  // Animation refs
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const logoScaleAnim = useRef(new Animated.Value(0.8)).current;
+  const buttonScaleAnim = useRef(new Animated.Value(0.9)).current;
+  const featuresOpacity = useRef(new Animated.Value(0)).current;
 
   // Helper function to check trial status
   const checkTrialStatus = async () => {
@@ -73,6 +82,50 @@ export default function HomeScreen() {
       };
     }
   };
+
+  // Opening animation effect
+  useEffect(() => {
+    const animationSequence = Animated.sequence([
+      // First: Header and logo appear
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.spring(logoScaleAnim, {
+          toValue: 1,
+          tension: 80,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]),
+      
+      // Then: Action buttons appear
+      Animated.spring(buttonScaleAnim, {
+        toValue: 1,
+        tension: 100,
+        friction: 10,
+        useNativeDriver: true,
+        delay: 200,
+      }),
+      
+      // Finally: Features section appears
+      Animated.timing(featuresOpacity, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+        delay: 100,
+      }),
+    ]);
+
+    animationSequence.start();
+  }, []);
 
   // Check if should redirect to paywall
   useFocusEffect(
@@ -244,7 +297,15 @@ export default function HomeScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
       
       {/* Clean Header */}
-      <View style={styles.headerContainer}>
+      <Animated.View 
+        style={[
+          styles.headerContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          }
+        ]}
+      >
         <SafeAreaView>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{uiTexts.appName || 'LandmarkAI'}</Text>
@@ -263,7 +324,7 @@ export default function HomeScreen() {
             </View>
           </View>
         </SafeAreaView>
-      </View>
+      </Animated.View>
 
 
       {/* Main Content with ScrollView */}
@@ -273,18 +334,35 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
       >
         {/* Travel Hero Section */}
-        <View style={styles.heroSection}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoBackground}>
-              <Ionicons name="map" size={48} color="#000000" />
-            </View>
-          </View>
+        <Animated.View 
+          style={[
+            styles.heroSection,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <Animated.View 
+            style={[
+              styles.logoContainer,
+              {
+                transform: [{ scale: logoScaleAnim }],
+              }
+            ]}
+          >
+            <Image 
+              source={require('../assets/images/paywall_and_index_icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </Animated.View>
 
           <Text style={styles.title}>{uiTexts.discoverHistory || 'Discover History'}</Text>
           <Text style={styles.subtitle}>
             {uiTexts.subtitle || 'Your AI-powered travel companion for exploring historical landmarks'}
           </Text>
-        </View>
+        </Animated.View>
 
         {/* Usage Stats Card */}
         <View style={styles.usageCard}>
@@ -292,7 +370,15 @@ export default function HomeScreen() {
         </View>
 
         {/* Quick Actions - Travel Style */}
-        <View style={styles.quickActionsSection}>
+        <Animated.View 
+          style={[
+            styles.quickActionsSection,
+            {
+              transform: [{ scale: buttonScaleAnim }],
+              opacity: fadeAnim,
+            }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Start Your Journey</Text>
           
           <View style={styles.actionButtons}>
@@ -305,17 +391,22 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.secondaryAction} onPress={pickImage}>
-              <View style={styles.actionIconContainer}>
-                <Ionicons name="images" size={32} color="#ffffff" />
+              <View style={styles.secondaryActionIconContainer}>
+                <Ionicons name="images" size={32} color="#2c3e50" />
               </View>
-              <Text style={styles.actionTitle}>Explore</Text>
-              <Text style={styles.actionSubtitle}>Choose photo</Text>
+              <Text style={styles.secondaryActionTitle}>Explore</Text>
+              <Text style={styles.secondaryActionSubtitle}>Choose photo</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Animated.View>
 
         {/* Travel Features */}
-        <View style={styles.featuresSection}>
+        <Animated.View 
+          style={[
+            styles.featuresSection,
+            { opacity: featuresOpacity }
+          ]}
+        >
           <Text style={styles.sectionTitle}>Why Travelers Love Us</Text>
           <View style={styles.featuresGrid}>
             <View style={styles.featureCard}>
@@ -350,7 +441,7 @@ export default function HomeScreen() {
               <Text style={styles.featureText}>Instant historical insights</Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
       </ScrollView>
 
       {/* Bottom Navigation Bar */}
@@ -439,23 +530,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#13a4ec',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: 14,
     shadowColor: '#13a4ec',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
-    minWidth: 45,
+    width: 48,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
   proButtonText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
     textAlign: 'center',
-    lineHeight: 12,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   
   // Light Banners
@@ -595,6 +688,24 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#e9ecef',
   },
+  logoImage: {
+    width: 120,
+    height: 120,
+  },
+  placeholderLogo: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+  placeholderLogoText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6c757d',
+    letterSpacing: 1,
+  },
   title: {
     fontSize: 28,
     fontWeight: '800',
@@ -701,21 +812,32 @@ const styles = StyleSheet.create({
   },
   secondaryAction: {
     flex: 1,
-    backgroundColor: '#6c757d',
+    backgroundColor: '#ffffff',
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#6c757d',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   actionIconContainer: {
     width: 60,
     height: 60,
     borderRadius: 30,
     backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  secondaryActionIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(44,62,80,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -727,10 +849,23 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     letterSpacing: -0.3,
   },
+  secondaryActionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 4,
+    letterSpacing: -0.3,
+  },
   actionSubtitle: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.9)',
     fontWeight: '500',
+  },
+  secondaryActionSubtitle: {
+    fontSize: 14,
+    color: '#2c3e50',
+    fontWeight: '500',
+    opacity: 0.8,
   },
   
   // Travel Features Section

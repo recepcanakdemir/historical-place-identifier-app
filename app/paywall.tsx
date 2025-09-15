@@ -1,19 +1,21 @@
 // app/paywall.tsx - Unified Paywall Screen
+import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Image,
     Linking,
+    SafeAreaView,
     ScrollView,
+    StatusBar,
     StyleSheet,
     Switch,
     Text,
     TouchableOpacity,
     View,
-    StatusBar,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { hasFreeTrialBeenUsed, startFreeTrialSession } from '../services/accessService';
 import { checkSubscriptionStatus, purchaseSubscription } from '../services/subscriptionService';
 import { getUsageStats } from '../services/usageService';
@@ -321,17 +323,21 @@ export default function PaywallScreen() {
         return (
             <View style={styles.container}>
                 <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-                <View style={styles.modernHeader}>
-                    <TouchableOpacity style={styles.modernCloseButton} onPress={handleClose}>
-                        <Ionicons name="close" size={24} color="#6B7280" />
-                    </TouchableOpacity>
-                </View>
+                <SafeAreaView style={styles.safeArea}>
+                    <View style={styles.modernHeader}>
+                        <TouchableOpacity style={styles.modernCloseButton} onPress={handleClose}>
+                            <Ionicons name="close" size={24} color="#6B7280" />
+                        </TouchableOpacity>
+                    </View>
+                </SafeAreaView>
 
                 <View style={styles.premiumActiveContainer}>
                     <View style={styles.modernIconContainer}>
-                        <View style={styles.modernIconBackground}>
-                            <Ionicons name="library" size={32} color="#FFFFFF" />
-                        </View>
+                        <Image 
+                            source={require('../assets/images/paywall_and_index_icon.png')}
+                            style={styles.logoImage}
+                            resizeMode="contain"
+                        />
                     </View>
 
 
@@ -353,25 +359,28 @@ export default function PaywallScreen() {
     return (
         <View style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-            <ScrollView
-                style={styles.content}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Modern Header */}
+            <SafeAreaView style={styles.safeArea}>
                 <View style={styles.modernHeader}>
                     <TouchableOpacity style={styles.modernCloseButton} onPress={handleClose}>
                         <Ionicons name="close" size={24} color="#6B7280" />
                     </TouchableOpacity>
                 </View>
+            </SafeAreaView>
+            <ScrollView
+                style={styles.content}
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
 
                 {/* Hero Section */}
                 <View style={styles.heroSection}>
                     {/* Modern App Icon */}
                     <View style={styles.modernIconContainer}>
-                        <View style={styles.modernIconBackground}>
-                            <Ionicons name="library" size={32} color="#FFFFFF" />
-                        </View>
+                        <Image 
+                            source={require('../assets/images/paywall_and_index_icon.png')}
+                            style={styles.logoImage}
+                            resizeMode="contain"
+                        />
                     </View>
 
                     {/* Title & Subtitle */}
@@ -385,38 +394,24 @@ export default function PaywallScreen() {
                 <View style={styles.modernFeaturesSection}>
                     <View style={styles.modernFeatureItem}>
                         <View style={styles.featureIconContainer}>
-                            <Ionicons name="infinite" size={20} color="#000000" />
+                            <Ionicons name="infinite" size={12} color="#000000" />
                         </View>
                         <Text style={styles.modernFeatureText}>Unlimited landmark analysis</Text>
                     </View>
                     <View style={styles.modernFeatureItem}>
                         <View style={styles.featureIconContainer}>
-                            <Ionicons name="flash" size={20} color="#000000" />
+                            <Ionicons name="download" size={12} color="#000000" />
                         </View>
-                        <Text style={styles.modernFeatureText}>Priority AI processing</Text>
-                    </View>
-                    <View style={styles.modernFeatureItem}>
-                        <View style={styles.featureIconContainer}>
-                            <Ionicons name="download" size={20} color="#000000" />
-                        </View>
-                        <Text style={styles.modernFeatureText}>Advanced saving features</Text>
+                        <Text style={styles.modernFeatureText}>AI chat & Place recommendations</Text>
                     </View>
                 </View>
 
-                    {/* Usage Stats */}
+                    {/* Compact Usage Stats */}
                     {content.showUsageStats && usageStats && (
-                        <View style={styles.usageSection}>
-                            <Text style={styles.sectionTitle}>Your Current Usage</Text>
-                            <View style={styles.usageStats}>
-                                <View style={styles.usageStat}>
-                                    <Text style={styles.usageNumber}>{usageStats.totalAnalyses}</Text>
-                                    <Text style={styles.usageLabel}>Analyses Used</Text>
-                                </View>
-                                <View style={styles.usageStat}>
-                                    <Text style={styles.usageNumber}>{usageStats.remainingFreeAnalyses}</Text>
-                                    <Text style={styles.usageLabel}>Remaining</Text>
-                                </View>
-                            </View>
+                        <View style={styles.compactUsageSection}>
+                            <Text style={styles.compactUsageText}>
+                                Usage: {usageStats.totalAnalyses} used • {usageStats.remainingFreeAnalyses} remaining
+                            </Text>
                         </View>
                     )}
 
@@ -517,45 +512,33 @@ export default function PaywallScreen() {
                             </TouchableOpacity>
                         )}
 
-                        <TouchableOpacity
-                            style={styles.linkButton}
-                            onPress={handleRestorePurchases}
-                        >
-                            <Text style={styles.linkText}>Already purchased? Restore</Text>
-                        </TouchableOpacity>
                     </View>
 
-
-                    {/* Terms */}
-
-                    <View style={styles.termsSection}>
-                        <Text style={styles.termsText}>
-                            By continuing, you agree to our{" "}
-                            <Text
-                                style={styles.linkText}
-                                onPress={() =>
-                                    Linking.openURL(
-                                        "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
-                                    )
-                                }
-                            >
-                                Terms of Service
-                            </Text>{" "}
-                            and{"  "}
-                            <Text
-                                style={styles.linkText}
-                                onPress={() =>
-                                    Linking.openURL(
-                                        "https://www.freeprivacypolicy.com/live/d267bff4-586c-40d4-a03f-e425112f455d"
-                                    )
-                                }
-                            >
-                                Privacy Policy
-                            </Text>
-                            .
-                            {selectedPlan === "weekly" &&
-                                ""}
-                        </Text>
+                    {/* Compact Footer Links */}
+                    <View style={styles.footerLinksSection}>
+                        <TouchableOpacity onPress={handleRestorePurchases}>
+                            <Text style={styles.footerLinkText}>Restore</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.footerSeparator}>•</Text>
+                        <TouchableOpacity
+                            onPress={() =>
+                                Linking.openURL(
+                                    "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/"
+                                )
+                            }
+                        >
+                            <Text style={styles.footerLinkText}>Terms</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.footerSeparator}>•</Text>
+                        <TouchableOpacity
+                            onPress={() =>
+                                Linking.openURL(
+                                    "https://www.freeprivacypolicy.com/live/d267bff4-586c-40d4-a03f-e425112f455d"
+                                )
+                            }
+                        >
+                            <Text style={styles.footerLinkText}>Privacy</Text>
+                        </TouchableOpacity>
                     </View>
 
                 </View>
@@ -567,6 +550,9 @@ export default function PaywallScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+        backgroundColor: '#ffffff',
+    },
+    safeArea: {
         backgroundColor: '#ffffff',
     },
     
@@ -593,21 +579,21 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     scrollContent: {
-        paddingBottom: 40,
+        paddingBottom: 20,
     },
     
     // Hero Section
     heroSection: {
         alignItems: 'center',
-        paddingVertical: 40,
+        paddingVertical: 20,
     },
     modernIconContainer: {
-        marginBottom: 24,
+        marginBottom: 16,
     },
     modernIconBackground: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
         backgroundColor: '#13a4ec',
         justifyContent: 'center',
         alignItems: 'center',
@@ -617,44 +603,62 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 4,
     },
+    logoImage: {
+        width: 80,
+        height: 80,
+    },
+    placeholderLogo: {
+        width: '100%',
+        height: '100%',
+        borderRadius: 30,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.2)',
+    },
+    placeholderLogoText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        letterSpacing: 1,
+    },
     modernTitle: {
-        fontSize: 28,
+        fontSize: 24,
         fontWeight: '700',
         color: '#111827',
         textAlign: 'center',
-        marginBottom: 8,
+        marginBottom: 6,
         letterSpacing: -0.5,
     },
     modernSubtitle: {
-        fontSize: 16,
+        fontSize: 14,
         color: '#6B7280',
         textAlign: 'center',
-        lineHeight: 24,
-        marginBottom: 40,
+        lineHeight: 20,
+        marginBottom: 24,
     },
     
     // Modern Features
     modernFeaturesSection: {
-        marginBottom: 40,
+        marginBottom: 12,
     },
     modernFeatureItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        marginBottom: 8,
+        paddingVertical: 4,
+        paddingHorizontal: 6,
+        marginBottom: 2,
     },
     featureIconContainer: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
+        width: 22,
+        height: 22,
+        borderRadius: 11,
         backgroundColor: '#F3F4F6',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 8,
     },
     modernFeatureText: {
-        fontSize: 16,
+        fontSize: 12,
         color: '#374151',
         fontWeight: '500',
         flex: 1,
@@ -662,20 +666,20 @@ const styles = StyleSheet.create({
     
     // Modern Pricing
     modernPricingSection: {
-        marginBottom: 32,
+        marginBottom: 20,
     },
     modernSectionTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: '700',
         color: '#111827',
         textAlign: 'center',
-        marginBottom: 24,
+        marginBottom: 16,
     },
     modernPlanCard: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 12,
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 8,
         borderWidth: 2,
         borderColor: '#E5E7EB',
         shadowColor: '#000',
@@ -730,13 +734,13 @@ const styles = StyleSheet.create({
         borderColor: '#13a4ec',
     },
     modernPlanPrice: {
-        fontSize: 24,
+        fontSize: 20,
         fontWeight: '700',
         color: '#13a4ec',
-        marginBottom: 4,
+        marginBottom: 2,
     },
     modernPlanSubtext: {
-        fontSize: 14,
+        fontSize: 12,
         color: '#6B7280',
         fontWeight: '400',
     },
@@ -744,10 +748,10 @@ const styles = StyleSheet.create({
     // Modern Buttons
     modernPremiumButton: {
         backgroundColor: '#13a4ec',
-        borderRadius: 16,
-        paddingVertical: 16,
-        paddingHorizontal: 24,
-        marginBottom: 12,
+        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        marginBottom: 8,
         shadowColor: '#13a4ec',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.2,
@@ -772,10 +776,10 @@ const styles = StyleSheet.create({
     },
     modernFreeButton: {
         backgroundColor: '#F3F4F6',
-        borderRadius: 16,
-        paddingVertical: 16,
-        paddingHorizontal: 24,
-        marginBottom: 12,
+        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        marginBottom: 8,
         borderWidth: 1,
         borderColor: '#E5E7EB',
     },
@@ -853,39 +857,20 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
-    // Usage Stats
-    usageSection: {
-        width: '100%',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
-        marginBottom: 25,
-        borderWidth: 1,
-        borderColor: '#E5E5E5',
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: '#1F1F1F',
-        textAlign: 'center',
+    // Compact Usage Stats
+    compactUsageSection: {
+        backgroundColor: '#F8F9FA',
+        borderRadius: 8,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
         marginBottom: 16,
+        alignSelf: 'center',
     },
-    usageStats: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-    },
-    usageStat: {
-        alignItems: 'center',
-    },
-    usageNumber: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#FF5252',
-        marginBottom: 4,
-    },
-    usageLabel: {
-        fontSize: 14,
+    compactUsageText: {
+        fontSize: 12,
         color: '#666666',
+        fontWeight: '500',
+        textAlign: 'center',
     },
 
     // Pricing
@@ -972,8 +957,8 @@ const styles = StyleSheet.create({
         width: '100%',
         backgroundColor: '#FFFFFF',
         borderRadius: 12,
-        padding: 16,
-        marginBottom: 25,
+        padding: 12,
+        marginBottom: 16,
         borderWidth: 1,
         borderColor: '#E5E5E5',
     },
@@ -999,7 +984,7 @@ const styles = StyleSheet.create({
     // Actions
     actionsSection: {
         width: '100%',
-        marginBottom: 30,
+        marginBottom: 16,
     },
     premiumButton: {
         backgroundColor: '#13a4ec',
@@ -1054,16 +1039,16 @@ const styles = StyleSheet.create({
     // Terms
     termsSection: {
         width: '100%',
-        paddingHorizontal: 10,
+        paddingHorizontal: 8,
     },
     termsText: {
-        fontSize: 12,
+        fontSize: 10,
         color: '#999999',
         textAlign: 'center',
-        lineHeight: 18,
+        lineHeight: 14,
     },
     linkButton: {
-        paddingVertical: 12,
+        paddingVertical: 8,
         alignItems: 'center',
     },
     linkText: {
@@ -1071,6 +1056,25 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: '600',
         textDecorationLine: 'underline',
+    },
+    
+    // Compact Footer Links
+    footerLinksSection: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingVertical: 12,
+        gap: 8,
+    },
+    footerLinkText: {
+        color: '#13a4ec',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    footerSeparator: {
+        color: '#999999',
+        fontSize: 12,
+        fontWeight: '400',
     },
 });
 

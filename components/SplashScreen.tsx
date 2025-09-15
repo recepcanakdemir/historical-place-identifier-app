@@ -1,8 +1,9 @@
-// components/SplashScreen.tsx - Modern Light Theme Loading Screen
+// components/SplashScreen.tsx - Modern AI Theme Loading Screen
 import React, { useEffect, useRef } from 'react';
 import {
     Animated,
     Dimensions,
+    Image,
     StyleSheet,
     Text,
     View,
@@ -16,171 +17,142 @@ interface SplashScreenProps {
 
 export default function SplashScreen({ onLoadingComplete }: SplashScreenProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const logoRotateAnim = useRef(new Animated.Value(0)).current;
+  const textSlideAnim = useRef(new Animated.Value(50)).current;
   const textOpacity = useRef(new Animated.Value(0)).current;
-  const dotAnim1 = useRef(new Animated.Value(0)).current;
-  const dotAnim2 = useRef(new Animated.Value(0)).current;
-  const dotAnim3 = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Simplified animation sequence
+    // Pulse animation for logo
+    const pulseAnimation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    // Main animation sequence
     const animationSequence = Animated.sequence([
-      // Icon appears smoothly
+      // Logo appears with scale and fade
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 600,
+          duration: 800,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
-          tension: 80,
-          friction: 10,
+          tension: 100,
+          friction: 8,
           useNativeDriver: true,
         }),
       ]),
       
-      // Text appears
-      Animated.timing(textOpacity, {
+      // Text slides up and appears
+      Animated.parallel([
+        Animated.timing(textOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(textSlideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ]),
+
+      // Progress bar animation
+      Animated.timing(progressAnim, {
         toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
+        duration: 1500,
+        useNativeDriver: false,
       }),
     ]);
 
-    // Dot loading animation
-    const dotAnimation = () => {
-      Animated.sequence([
-        Animated.timing(dotAnim1, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(dotAnim2, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(dotAnim3, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.parallel([
-          Animated.timing(dotAnim1, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dotAnim2, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(dotAnim3, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start(() => {
-        dotAnimation(); // Loop the animation
-      });
-    };
-
+    // Start animations
+    pulseAnimation.start();
     animationSequence.start(() => {
-      dotAnimation();
       // Call completion callback after animation
       setTimeout(() => {
         onLoadingComplete?.();
-      }, 1200);
+      }, 500);
     });
+
+    // Cleanup
+    return () => {
+      pulseAnimation.stop();
+    };
   }, []);
+
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View style={styles.container}>
       {/* Main Content */}
       <View style={styles.content}>
-        {/* App Icon */}
+        {/* Logo with Animation */}
         <Animated.View
           style={[
-            styles.iconContainer,
+            styles.logoContainer,
             {
               opacity: fadeAnim,
-              transform: [{ scale: scaleAnim }],
+              transform: [
+                { scale: Animated.multiply(scaleAnim, pulseAnim) }
+              ],
             },
           ]}
         >
-          <View style={styles.iconWrapper}>
-            <Text style={styles.iconEmoji}>🏛️</Text>
-            <View style={styles.magnifyingGlass}>
-              <Text style={styles.magnifyingGlassEmoji}>🔍</Text>
-            </View>
-          </View>
+          <Image 
+            source={require('../assets/images/paywall_and_index_icon.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </Animated.View>
 
-        {/* App Name */}
+        {/* App Name and Tagline */}
         <Animated.View
           style={[
             styles.textContainer,
-            { opacity: textOpacity },
+            {
+              opacity: textOpacity,
+              transform: [{ translateY: textSlideAnim }],
+            },
           ]}
         >
-          <Text style={styles.appName}>Historical Places</Text>
-          <Text style={styles.tagline}>Discover the world&apos;s landmarks</Text>
+          <Text style={styles.appName}>LandmarkAI</Text>
+          <Text style={styles.tagline}>Discover History with AI</Text>
         </Animated.View>
 
-        {/* Loading Dots */}
+        {/* Progress Bar */}
         <Animated.View 
           style={[
-            styles.loadingContainer,
+            styles.progressContainer,
             { opacity: textOpacity },
           ]}
         >
-          <View style={styles.dotsContainer}>
+          <View style={styles.progressTrack}>
             <Animated.View
               style={[
-                styles.dot,
-                {
-                  opacity: dotAnim1,
-                  transform: [{
-                    scale: dotAnim1.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.8, 1.2],
-                    }),
-                  }],
-                },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.dot,
-                {
-                  opacity: dotAnim2,
-                  transform: [{
-                    scale: dotAnim2.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.8, 1.2],
-                    }),
-                  }],
-                },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.dot,
-                {
-                  opacity: dotAnim3,
-                  transform: [{
-                    scale: dotAnim3.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0.8, 1.2],
-                    }),
-                  }],
-                },
+                styles.progressBar,
+                { width: progressWidth },
               ]}
             />
           </View>
+          <Text style={styles.loadingText}>Loading...</Text>
         </Animated.View>
       </View>
     </View>
@@ -200,69 +172,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
-  iconContainer: {
-    marginBottom: 50,
+  logoContainer: {
+    marginBottom: 60,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconWrapper: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  iconEmoji: {
-    fontSize: 80,
-    textAlign: 'center',
-  },
-  magnifyingGlass: {
-    position: 'absolute',
-    bottom: -10,
-    right: -10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 25,
-    padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    borderWidth: 2,
-    borderColor: '#f0f0f0',
-  },
-  magnifyingGlassEmoji: {
-    fontSize: 28,
+  logoImage: {
+    width: 120,
+    height: 120,
   },
   textContainer: {
     alignItems: 'center',
     marginBottom: 80,
   },
   appName: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#333333',
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#2c3e50',
     textAlign: 'center',
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    marginBottom: 12,
+    letterSpacing: -1,
   },
   tagline: {
-    fontSize: 16,
-    color: '#666666',
+    fontSize: 18,
+    color: '#7f8c8d',
     textAlign: 'center',
-    fontWeight: '400',
-    letterSpacing: 0.3,
+    fontWeight: '500',
+    letterSpacing: 0.5,
   },
-  loadingContainer: {
+  progressContainer: {
     alignItems: 'center',
+    width: '100%',
+    maxWidth: 200,
   },
-  dotsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  progressTrack: {
+    width: '100%',
+    height: 4,
+    backgroundColor: '#ecf0f1',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginBottom: 16,
   },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#4A90E2',
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#13a4ec',
+    borderRadius: 2,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#95a5a6',
+    fontWeight: '500',
+    letterSpacing: 1,
   },
 });
