@@ -11,7 +11,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  StatusBar,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { deleteSavedPlace, getSavedPlaces } from '../services/storageService';
 
 export default function SavedScreen() {
@@ -92,17 +94,36 @@ export default function SavedScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Loading saved places...</Text>
-      </SafeAreaView>
+      <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading saved places...</Text>
+        </View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Saved Landmarks</Text>
-        <Text style={styles.subtitle}>{savedPlaces.length} places saved</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Clean Header */}
+      <View style={styles.headerContainer}>
+        <SafeAreaView>
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#2c3e50" />
+            </TouchableOpacity>
+            <View style={styles.headerContent}>
+              <Text style={styles.headerTitle}>Saved Landmarks</Text>
+              <Text style={styles.headerSubtitle}>{savedPlaces.length} places saved</Text>
+            </View>
+            <View style={styles.headerRight} />
+          </View>
+        </SafeAreaView>
       </View>
 
       {savedPlaces.length === 0 ? (
@@ -128,36 +149,69 @@ export default function SavedScreen() {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
+  },
+  
+  // Clean Header Styles
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   header: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 4,
+  headerContent: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+    letterSpacing: 0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6c757d',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  headerRight: {
+    width: 40,
+  },
+  
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loadingText: {
-    textAlign: 'center',
-    marginTop: 50,
     fontSize: 16,
-    color: '#666',
+    color: '#6c757d',
+    fontWeight: '500',
   },
   emptyState: {
     flex: 1,
@@ -170,51 +224,63 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2c3e50',
     marginBottom: 10,
+    letterSpacing: -0.3,
   },
   emptySubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#6c757d',
     textAlign: 'center',
     marginBottom: 30,
     lineHeight: 24,
+    fontWeight: '400',
+    paddingHorizontal: 16,
   },
   exploreButton: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#13a4ec',
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 25,
+    shadowColor: '#13a4ec',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   exploreButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   listContainer: {
-    padding: 15,
+    padding: 16,
+    backgroundColor: '#f8f9fa',
   },
   savedItem: {
     flexDirection: 'row',
     backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f1f3f4',
   },
   thumbnail: {
     width: 60,
     height: 60,
-    borderRadius: 8,
+    borderRadius: 12,
     marginRight: 15,
   },
   itemInfo: {
@@ -223,24 +289,29 @@ const styles = StyleSheet.create({
   },
   itemName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#2c3e50',
     marginBottom: 4,
+    letterSpacing: -0.2,
   },
   itemLocation: {
     fontSize: 14,
-    color: '#666',
+    color: '#6c757d',
     marginBottom: 4,
+    fontWeight: '500',
   },
   itemDate: {
     fontSize: 12,
-    color: '#999',
+    color: '#9ca3af',
+    fontWeight: '500',
   },
   deleteButton: {
     justifyContent: 'center',
     alignItems: 'center',
     width: 40,
     height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
   },
   deleteButtonText: {
     fontSize: 20,

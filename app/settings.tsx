@@ -13,7 +13,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  StatusBar,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   SUPPORTED_LANGUAGES,
   changeLanguage,
@@ -207,11 +209,26 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{uiTexts.settings}</Text>
-        </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Clean Header */}
+      <View style={styles.headerContainer}>
+        <SafeAreaView>
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#2c3e50" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>{uiTexts.settings}</Text>
+            <View style={styles.headerRight} />
+          </View>
+        </SafeAreaView>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Premium Status Section */}
         <View style={styles.section}>
@@ -359,14 +376,6 @@ export default function SettingsScreen() {
 
         </View>
 
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.backButtonText}>← {uiTexts.ok}</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
 
       {/* Language Selection Modal */}
@@ -405,33 +414,67 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
   },
-  scrollView: {
-    flex: 1,
+  
+  // Clean Header Styles
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   header: {
-    padding: 20,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+    letterSpacing: 0.5,
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 40,
+  },
+  
+  content: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   section: {
     backgroundColor: 'white',
-    marginTop: 20,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 16,
     paddingVertical: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
@@ -472,16 +515,22 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   upgradeButton: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#13a4ec',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    borderRadius: 8,
+    borderRadius: 16,
     alignItems: 'center',
+    shadowColor: '#13a4ec',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   upgradeButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
 
   // Statistics Styles
@@ -494,17 +543,23 @@ const styles = StyleSheet.create({
   statCard: {
     flex: 1,
     backgroundColor: '#f8f9fa',
-    borderRadius: 8,
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#4A90E2',
+    fontWeight: '800',
+    color: '#000000',
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   statLabel: {
     fontSize: 14,
@@ -561,21 +616,6 @@ const styles = StyleSheet.create({
   arrow: {
     fontSize: 20,
     color: '#666',
-  },
-  footer: {
-    padding: 20,
-    marginTop: 40,
-  },
-  backButton: {
-    backgroundColor: '#4A90E2',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  backButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
 
   // Modal Styles
@@ -660,11 +700,11 @@ const styles = StyleSheet.create({
   },
   selectedLanguageName: {
     fontWeight: '600',
-    color: '#4A90E2',
+    color: '#000000',
   },
   checkmark: {
     fontSize: 18,
-    color: '#4A90E2',
+    color: '#000000',
     fontWeight: 'bold',
   },
 });

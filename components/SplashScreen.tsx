@@ -127,7 +127,7 @@ export default function SplashScreen({ onLoadingComplete }: SplashScreenProps) {
           ]}
         >
           <Text style={styles.appName}>Historical Places</Text>
-          <Text style={styles.tagline}>Discover the world's landmarks</Text>
+          <Text style={styles.tagline}>Discover the world&apos;s landmarks</Text>
         </Animated.View>
 
         {/* Loading Dots */}

@@ -1,6 +1,5 @@
 // app/result.tsx - Updated with Paywall Integration
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -14,16 +13,21 @@ import {
   Text,
   TouchableOpacity,
   View,
+  StatusBar,
+  Animated,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { saveHistoricalPlace } from '../services/storageService';
 import { canPerformAnalysis, getUsageStats, useAnalysis } from '../services/usageService';
 import { analyzeHistoricalPlace } from '../services/visionService';
-import { enrichNearbyPlaces, enrichNearbyPlacesWithPlaceId } from '../services/placesService';
+import { enrichNearbyPlacesWithPlaceId } from '../services/placesService';
 import { PlaceInfo, UsageStats, NearbyPlace } from '../types';
 import { NearbyPlaces } from '../components/NearbyPlaces';
 import { ChatModal } from '../components/ChatModal';
 import { openInMaps } from '../utils/mapUtils';
 import { isChatServiceAvailable } from '../services/chatService';
+
+import React, { useEffect, useState, useRef } from 'react';
 
 export default function ResultScreen() {
   const params = useLocalSearchParams<{ 
@@ -36,8 +40,8 @@ export default function ResultScreen() {
   
   // Debug params to find any objects
   console.log('🔍 PARAMS INSPECTION:');
-  Object.keys(params).forEach(key => {
-    const value = params[key];
+  Object.keys(params).forEach((key: string) => {
+    const value = params[key as keyof typeof params];
     console.log(`  ${key}:`, typeof value, value);
     if (typeof value === 'object') {
       console.error(`❌ FOUND OBJECT in params.${key}:`, value);
@@ -60,7 +64,11 @@ export default function ResultScreen() {
   
   // Two-phase loading states
   const [nearbyPlacesEnriching, setNearbyPlacesEnriching] = useState(false);
-  const [enrichmentProgress, setEnrichmentProgress] = useState<{ completed: number; total: number } | null>(null);
+  
+  // Animation values
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   
   // Chat modal state
   const [showChatModal, setShowChatModal] = useState(false);
@@ -74,6 +82,62 @@ export default function ResultScreen() {
       checkLimitsAndAnalyze();
     }
   }, [imageUri, savedData, fromSaved]);
+
+  // Animation effects
+  useEffect(() => {
+    if (loading) {
+      // Start pulse animation
+      const pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.2,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      
+      // Start rotation animation
+      const rotateAnimation = Animated.loop(
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        })
+      );
+      
+      // Start scanning line animation
+      const scanAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(fadeAnim, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      
+      pulseAnimation.start();
+      rotateAnimation.start();
+      scanAnimation.start();
+      
+      return () => {
+        pulseAnimation.stop();
+        rotateAnimation.stop();
+        scanAnimation.stop();
+      };
+    }
+  }, [loading, pulseAnim, rotateAnim, fadeAnim]);
 
   const loadSavedData = () => {
     try {
@@ -126,8 +190,8 @@ export default function ResultScreen() {
       await performAnalysis();
       
       // After successful analysis, use one analysis credit
-      const result = await useAnalysis();
-      console.log('Analysis used, remaining:', result.remainingAnalyses);
+      const analysisResult = await useAnalysis();
+      console.log('Analysis used, remaining:', analysisResult.remainingAnalyses);
       
     } catch (error) {
       console.error('Error in limit check:', error);
@@ -141,7 +205,6 @@ export default function ResultScreen() {
     try {
       // Batch state updates for better performance
       setNearbyPlacesEnriching(true);
-      setEnrichmentProgress({ completed: 0, total: nearbyPlaces.length });
       
       console.log('🔧 Phase 2: Enriching nearby places with Place IDs...');
       
@@ -158,14 +221,13 @@ export default function ResultScreen() {
           if (!prevInfo) return prevInfo;
           return {
             ...prevInfo,
-            nearbyMustSeePlaces: enrichedPlaces.map(place => ({
+            nearbyMustSeePlaces: enrichedPlaces.map((place: any) => ({
               ...place,
               isEnriched: true
             }))
           };
         });
         setNearbyPlacesEnriching(false);
-        setEnrichmentProgress(null);
       });
       
     } catch (error) {
@@ -173,7 +235,6 @@ export default function ResultScreen() {
       // Ensure state is cleaned up even on error
       requestAnimationFrame(() => {
         setNearbyPlacesEnriching(false);
-        setEnrichmentProgress(null);
       });
     }
   };
@@ -218,7 +279,7 @@ export default function ResultScreen() {
       // Set initial place info (without enriched nearby places)
       if (result.nearbyMustSeePlaces && result.nearbyMustSeePlaces.length > 0) {
         // Mark places as not enriched initially
-        result.nearbyMustSeePlaces = result.nearbyMustSeePlaces.map(place => ({
+        result.nearbyMustSeePlaces = result.nearbyMustSeePlaces.map((place: any) => ({
           ...place,
           latitude: typeof place.latitude === 'number' && !isNaN(place.latitude) ? place.latitude : 
                    (typeof place.latitude === 'string' && !isNaN(parseFloat(place.latitude))) ? parseFloat(place.latitude) : 0,
@@ -255,8 +316,11 @@ export default function ResultScreen() {
       
       // Safely handle location for saving
       let locationForSaving = placeInfo.location;
-      if (typeof locationForSaving === 'object' && locationForSaving?.latitude && locationForSaving?.longitude) {
-        locationForSaving = `${locationForSaving.latitude}, ${locationForSaving.longitude}`;
+      if (typeof locationForSaving === 'object' && locationForSaving) {
+        const locationObj = locationForSaving as any;
+        if (locationObj.latitude && locationObj.longitude) {
+          locationForSaving = `${locationObj.latitude}, ${locationObj.longitude}`;
+        }
       }
       
       const dataToSave = {
@@ -293,8 +357,11 @@ export default function ResultScreen() {
     try {
       // Safely handle location for sharing
       let locationText = placeInfo.location;
-      if (typeof locationText === 'object' && locationText?.latitude && locationText?.longitude) {
-        locationText = `${locationText.latitude}, ${locationText.longitude}`;
+      if (typeof locationText === 'object' && locationText) {
+        const locationObj = locationText as any;
+        if (locationObj.latitude && locationObj.longitude) {
+          locationText = `${locationObj.latitude}, ${locationObj.longitude}`;
+        }
       }
       
       const shareText = `🏛️ ${placeInfo.name}\n\n${placeInfo.description}\n\n📍 ${locationText}\n\nDiscovered with LandmarkAI app!`;
@@ -358,7 +425,7 @@ export default function ResultScreen() {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.backButton}
+              style={styles.modalBackButton}
               onPress={handleTryAgain}
             >
               <Text style={styles.backButtonText}>Go Back</Text>
@@ -378,30 +445,109 @@ export default function ResultScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Clean Header */}
+      <View style={styles.headerContainer}>
+        <SafeAreaView>
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.headerBackButton} 
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#2c3e50" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Analysis Result</Text>
+            <View style={styles.headerRight}>
+              {placeInfo && !loading && (
+                <View style={styles.headerActions}>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={handleShare}
+                  >
+                    <Ionicons name="share-outline" size={16} color="#6B7280" />
+                  </TouchableOpacity>
+                  
+                  {fromSaved !== 'true' && (
+                    <TouchableOpacity 
+                      style={[styles.actionButton, isSaved && styles.actionButtonSaved]}
+                      onPress={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <ActivityIndicator size="small" color="#000000" />
+                      ) : (
+                        <Ionicons 
+                          name={isSaved ? "heart" : "heart-outline"} 
+                          size={16} 
+                          color={isSaved ? "#EF4444" : "#6B7280"} 
+                        />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+            </View>
+          </View>
+        </SafeAreaView>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Image source={{ uri: imageUri }} style={styles.image} />
         
-        {/* Location banner - only for camera photos */}
-        {userLocation && fromGallery !== 'true' && (
-          <View style={styles.locationBanner}>
-            <Text style={styles.locationBannerText}>📍 {userLocation}</Text>
-          </View>
-        )}
-        
-        {/* Gallery banner */}
-        {fromGallery === 'true' && (
-          <View style={styles.galleryBanner}>
-            <Text style={styles.galleryBannerText}>🖼️ Analyzed from gallery image</Text>
-          </View>
-        )}
         
         {loading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4A90E2" />
-            <Text style={styles.loadingText}>
-              {fromSaved === 'true' ? 'Loading saved data...' : 'Analyzing image...'}
-            </Text>
+          <View style={styles.modernLoadingContainer}>
+            <View style={styles.loadingContent}>
+              <View style={styles.loadingIcon}>
+                <Animated.View style={[
+                  styles.iconWrapper,
+                  {
+                    transform: [{ scale: pulseAnim }]
+                  }
+                ]}>
+                  <Animated.View style={{
+                    transform: [{ rotate: rotateAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '360deg']
+                    })}]
+                  }}>
+                    <Ionicons name="scan" size={28} color="#000000" />
+                  </Animated.View>
+                </Animated.View>
+              </View>
+              
+              <View style={styles.loadingTextContainer}>
+                <Text style={styles.loadingTitle}>
+                  {fromSaved === 'true' ? 'Loading saved data...' : 'Analyzing landmark...'}
+                </Text>
+                <Text style={styles.loadingSubtitle}>
+                  {fromSaved === 'true' ? 'Retrieving your saved information' : 'AI is identifying historical details'}
+                </Text>
+              </View>
+              
+              <View style={styles.progressDots}>
+                <Animated.View style={[
+                  styles.dot,
+                  { opacity: fadeAnim }
+                ]} />
+                <Animated.View style={[
+                  styles.dot,
+                  { opacity: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.3, 1]
+                  })}
+                ]} />
+                <Animated.View style={[
+                  styles.dot,
+                  { opacity: fadeAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.1, 0.8]
+                  })}
+                ]} />
+              </View>
+            </View>
           </View>
         )}
 
@@ -415,63 +561,106 @@ export default function ResultScreen() {
         )}
 
         {placeInfo && !loading && (
-          <View style={styles.infoContainer}>
-            <Text style={styles.placeName}>{placeInfo.name}</Text>
-            <Text style={styles.placeDescription}>{placeInfo.description}</Text>
+          <View style={styles.contentSection}>
+            {/* Hero Section */}
+            <View style={styles.heroSection}>
+              <Text style={styles.landmarkName}>{placeInfo.name}</Text>
+              <Text style={styles.landmarkDescription}>{placeInfo.description}</Text>
+            </View>
             
-            <View style={styles.detailsGrid}>
+            {/* Details Cards Grid */}
+            <View style={styles.detailsSection}>
+              <Text style={styles.sectionTitle}>Key Information</Text>
               {placeInfo.location && (
-                <View style={styles.detailCard}>
-                  <Text style={styles.detailLabel}>📍 Location</Text>
-                  <Text style={styles.detailValue}>{placeInfo.location}</Text>
+                <View style={styles.modernDetailCard}>
+                  <View style={styles.detailHeader}>
+                    <View style={styles.detailIconContainer}>
+                      <Ionicons name="location" size={16} color="#000000" />
+                    </View>
+                    <Text style={styles.modernDetailLabel}>Location</Text>
+                  </View>
+                  <Text style={styles.modernDetailValue}>{placeInfo.location}</Text>
                 </View>
               )}
               
               {placeInfo.yearBuilt && (
-                <View style={styles.detailCard}>
-                  <Text style={styles.detailLabel}>🗓️ Built</Text>
-                  <Text style={styles.detailValue}>{placeInfo.yearBuilt}</Text>
+                <View style={styles.modernDetailCard}>
+                  <View style={styles.detailHeader}>
+                    <View style={styles.detailIconContainer}>
+                      <Ionicons name="calendar-outline" size={16} color="#000000" />
+                    </View>
+                    <Text style={styles.modernDetailLabel}>Built</Text>
+                  </View>
+                  <Text style={styles.modernDetailValue}>{placeInfo.yearBuilt}</Text>
                 </View>
               )}
               
               {placeInfo.architecture && (
-                <View style={styles.detailCard}>
-                  <Text style={styles.detailLabel}>🏛️ Architecture</Text>
-                  <Text style={styles.detailValue}>{placeInfo.architecture}</Text>
+                <View style={styles.modernDetailCard}>
+                  <View style={styles.detailHeader}>
+                    <View style={styles.detailIconContainer}>
+                      <Ionicons name="business-outline" size={16} color="#000000" />
+                    </View>
+                    <Text style={styles.modernDetailLabel}>Architecture</Text>
+                  </View>
+                  <Text style={styles.modernDetailValue}>{placeInfo.architecture}</Text>
                 </View>
               )}
             </View>
             
+            {/* Historical Significance Section */}
             {placeInfo.significance && (
-              <View style={styles.significanceContainer}>
-                <Text style={styles.significanceTitle}>🎯 Historical Significance</Text>
-                <Text style={styles.significanceText}>{placeInfo.significance}</Text>
+              <View style={styles.modernSection}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIconContainer}>
+                    <Ionicons name="star" size={12} color="#000000" />
+                  </View>
+                  <Text style={styles.sectionTitle}>Historical Significance</Text>
+                </View>
+                <View style={styles.significanceCard}>
+                  <Text style={styles.significanceText}>{placeInfo.significance}</Text>
+                </View>
               </View>
             )}
             
+            {/* Fun Facts Section */}
             {placeInfo.funFacts && placeInfo.funFacts.length > 0 && (
-              <View style={styles.funFactsContainer}>
-                <Text style={styles.funFactsTitle}>💡 Fun Facts</Text>
-                {placeInfo.funFacts.map((fact, index) => (
-                  <View key={index} style={styles.funFactItem}>
-                    <Text style={styles.funFactBullet}>•</Text>
-                    <Text style={styles.funFactText}>{fact}</Text>
+              <View style={styles.modernSection}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.funFactsIconContainer}>
+                    <Ionicons name="bulb" size={12} color="#10B981" />
                   </View>
-                ))}
+                  <Text style={styles.sectionTitle}>Fun Facts</Text>
+                </View>
+                <View style={styles.modernFunFactsCard}>
+                  {placeInfo.funFacts.map((fact, index) => (
+                    <View key={index} style={styles.modernFunFactItem}>
+                      <View style={styles.modernFunFactIcon}>
+                        <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                      </View>
+                      <Text style={styles.modernFunFactText}>{fact}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
             )}
             
             {/* Nearby Places Section */}
             {placeInfo.nearbyMustSeePlaces && placeInfo.nearbyMustSeePlaces.length > 0 && (
-              <View style={styles.nearbyPlacesContainer}>
-                <View style={styles.nearbyPlacesHeader}>
-                  <Text style={styles.nearbyPlacesTitle}>🗺️ Nearby Must-See Places</Text>
-                  {nearbyPlacesEnriching && (
-                    <View style={styles.enrichmentStatus}>
-                      <ActivityIndicator size="small" color="#4A90E2" />
-                      <Text style={styles.enrichmentText}>Enhancing links...</Text>
-                    </View>
-                  )}
+              <View style={styles.modernSection}>
+                <View style={styles.sectionHeader}>
+                  <View style={styles.sectionIconContainer}>
+                    <Ionicons name="map" size={20} color="#3B82F6" />
+                  </View>
+                  <View style={styles.nearbyHeaderContent}>
+                    <Text style={styles.sectionTitle}>Nearby Must-See Places</Text>
+                    {nearbyPlacesEnriching && (
+                      <View style={styles.enrichmentStatus}>
+                        <ActivityIndicator size="small" color="#4A90E2" />
+                        <Text style={styles.enrichmentText}>Enhancing links...</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
                 <NearbyPlaces 
                   places={placeInfo.nearbyMustSeePlaces} 
@@ -480,53 +669,20 @@ export default function ResultScreen() {
               </View>
             )}
             
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              {fromSaved !== 'true' && (
-                <TouchableOpacity 
-                  style={[
-                    styles.saveButton, 
-                    isSaved && styles.savedButton,
-                    saving && styles.savingButton
-                  ]}
-                  onPress={handleSave}
-                  disabled={isSaved || saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : (
-                    <Text style={styles.saveButtonText}>
-                      {isSaved ? '✓ Saved' : '💾 Save Place'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-              )}
-              
-              <TouchableOpacity 
-                style={styles.shareButton}
-                onPress={handleShare}
-              >
-                <Text style={styles.shareButtonText}>📤 Share Discovery</Text>
-              </TouchableOpacity>
-              
-              {/* Ask AI Chat Button */}
-              {placeInfo && isChatServiceAvailable() && (
-                <TouchableOpacity 
-                  style={styles.chatButton}
-                  onPress={() => setShowChatModal(true)}
-                >
-                  <Text style={styles.chatButtonText}>🤖 Ask AI</Text>
-                </TouchableOpacity>
-              )}
-            </View>
             
             {fromSaved === 'true' && (
-              <TouchableOpacity 
-                style={styles.viewSavedButton}
-                onPress={() => router.push('/saved')}
-              >
-                <Text style={styles.viewSavedButtonText}>📚 View All Saved Places</Text>
-              </TouchableOpacity>
+              <View style={styles.modernSection}>
+                <TouchableOpacity 
+                  style={styles.modernViewSavedButton}
+                  onPress={() => router.push('/saved')}
+                >
+                  <View style={styles.viewSavedContent}>
+                    <Ionicons name="library" size={20} color="#000000" />
+                    <Text style={styles.modernViewSavedText}>View All Saved Places</Text>
+                    <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                  </View>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         )}
@@ -535,6 +691,18 @@ export default function ResultScreen() {
       {/* Limit Reached Modal */}
       <LimitReachedModal />
       
+      {/* Floating Ask AI Button */}
+      {placeInfo && !loading && isChatServiceAvailable() && (
+        <TouchableOpacity 
+          style={styles.floatingAskAI}
+          onPress={() => setShowChatModal(true)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="chatbubbles" size={20} color="#ffffff" />
+          <Text style={styles.floatingAskAIText}>Ask AI</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Chat Modal */}
       {placeInfo && (
         <ChatModal
@@ -543,42 +711,158 @@ export default function ResultScreen() {
           onClose={() => setShowChatModal(false)}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#f5f5f5' 
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
   },
-  scrollView: { 
-    flex: 1 
+  
+  // Clean Header Styles
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  headerBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+    letterSpacing: 0.5,
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 80,
+    justifyContent: 'flex-end',
+  },
+  
+  content: {
+    flex: 1,
+  },
+  
+  // Header actions
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionButtonSaved: {
+    backgroundColor: '#FEF2F2',
+  },
+  
+  // Modern loading styles
+  loadingContent: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingIcon: {
+    marginBottom: 24,
+  },
+  iconWrapper: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  loadingTextContainer: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  loadingTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  loadingSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  progressDots: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#13a4ec',
+  },
+  
+  // Floating Ask AI Button
+  floatingAskAI: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#13a4ec',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 1000,
+    gap: 8,
+  },
+  floatingAskAIText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  
+  // Section headers
+  sectionHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  sectionIcon: {
+    marginRight: 8,
   },
   image: { 
     width: '100%', 
     height: 250, 
     resizeMode: 'cover' 
-  },
-  locationBanner: {
-    backgroundColor: 'rgba(74, 144, 226, 0.9)',
-    padding: 10,
-    alignItems: 'center',
-  },
-  locationBannerText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  galleryBanner: {
-    backgroundColor: 'rgba(80, 200, 120, 0.9)',
-    padding: 10,
-    alignItems: 'center',
-  },
-  galleryBannerText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
   },
   loadingContainer: { 
     padding: 40, 
@@ -609,8 +893,45 @@ const styles = StyleSheet.create({
     fontSize: 16, 
     fontWeight: '600' 
   },
-  infoContainer: { 
-    padding: 20 
+  // New content layout
+  contentContainer: {
+    flex: 1,
+  },
+  heroSection: {
+    paddingTop: 20,
+    paddingBottom: 24,
+  },
+  imageMetadata: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    gap: 12,
+  },
+  metadataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+  },
+  metadataText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  landmarkName: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+    lineHeight: 32,
+  },
+  landmarkDescription: {
+    fontSize: 16,
+    color: '#6B7280',
+    lineHeight: 24,
+    fontWeight: '400',
   },
   placeName: { 
     fontSize: 24, 
@@ -625,28 +946,31 @@ const styles = StyleSheet.create({
     marginBottom: 20 
   },
   detailsGrid: { 
-    flexDirection: 'row', 
-    flexWrap: 'wrap', 
-    marginVertical: 15, 
-    gap: 10 
+    gap: 12
   },
   detailCard: { 
     backgroundColor: 'white', 
     padding: 12, 
     borderRadius: 8, 
-    minWidth: '45%', 
-    flex: 1, 
     shadowColor: '#000', 
     shadowOffset: { width: 0, height: 1 }, 
     shadowOpacity: 0.1, 
     shadowRadius: 2, 
     elevation: 2 
   },
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  detailIcon: {
+    marginRight: 6,
+  },
   detailLabel: { 
     fontSize: 14, 
     fontWeight: '600', 
-    color: '#4A90E2', 
-    marginBottom: 4 
+    color: '#13a4ec', 
+    flex: 1,
   },
   detailValue: { 
     fontSize: 14, 
@@ -667,8 +991,9 @@ const styles = StyleSheet.create({
   },
   significanceText: { 
     fontSize: 16, 
-    color: '#555', 
-    lineHeight: 24 
+    color: '#374151', 
+    lineHeight: 25,
+    fontWeight: '400'
   },
   funFactsContainer: { 
     marginTop: 20, 
@@ -689,11 +1014,15 @@ const styles = StyleSheet.create({
     marginBottom: 8, 
     alignItems: 'flex-start' 
   },
-  funFactBullet: { 
-    fontSize: 16, 
-    color: '#ffc107', 
-    marginRight: 8, 
-    marginTop: 2 
+  funFactBullet: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#fef3c7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    marginTop: 2,
   },
   funFactText: { 
     fontSize: 15, 
@@ -707,13 +1036,18 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   saveButton: {
-    backgroundColor: '#4A90E2',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: '#13a4ec',
+    padding: 16,
+    borderRadius: 16,
     flex: 1,
     alignItems: 'center',
     minHeight: 50,
     justifyContent: 'center',
+    shadowColor: '#13a4ec',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   savedButton: {
     backgroundColor: '#50C878',
@@ -724,31 +1058,44 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   shareButton: {
-    backgroundColor: '#FF6B6B',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: '#6c757d',
+    padding: 16,
+    borderRadius: 16,
     flex: 1,
     alignItems: 'center',
+    shadowColor: '#6c757d',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   shareButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   chatButton: {
-    backgroundColor: '#9b59b6',
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: '#28a745',
+    padding: 16,
+    borderRadius: 16,
     flex: 1,
     alignItems: 'center',
+    shadowColor: '#28a745',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   chatButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   viewSavedButton: {
     backgroundColor: '#6C5CE7',
@@ -818,26 +1165,34 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   upgradeButton: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#13a4ec',
     padding: 15,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: 'center',
+    shadowColor: '#13a4ec',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   upgradeButtonText: {
     color: 'white',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
-  backButton: {
-    backgroundColor: '#f0f0f0',
+  modalBackButton: {
+    backgroundColor: '#f8f9fa',
     padding: 15,
-    borderRadius: 12,
+    borderRadius: 20,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   backButtonText: {
-    color: '#666',
+    color: '#6c757d',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   
   // Nearby Places Styles
@@ -865,5 +1220,227 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#4A90E2',
     fontStyle: 'italic',
+  },
+  
+  // Modern redesign styles
+  contentSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+  },
+  
+  detailsSection: {
+    marginTop: 24,
+    marginBottom: 20,
+  },
+  
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
+    letterSpacing: -0.3,
+  },
+  
+  modernSection: {
+    marginTop: 32,
+    marginBottom: 16,
+  },
+  
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    gap: 8,
+  },
+  
+  sectionIconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 2,
+  },
+  
+  modernDetailCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  
+  detailIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  
+  modernDetailLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    flex: 1,
+  },
+  
+  modernDetailValue: {
+    fontSize: 15,
+    color: '#1F2937',
+    fontWeight: '500',
+    marginTop: 6,
+    lineHeight: 22,
+  },
+  
+  significanceCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  
+  modernFunFactsCard: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  
+  funFactsIconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#ECFDF5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: 2,
+  },
+  
+  modernFunFactItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+    gap: 10,
+  },
+  
+  modernFunFactIcon: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#DCFCE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 1,
+  },
+  
+  modernFunFactText: {
+    fontSize: 15,
+    color: '#065F46',
+    lineHeight: 22,
+    flex: 1,
+    fontWeight: '400',
+  },
+  
+  nearbyHeaderContent: {
+    flex: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  
+  modernLoadingContainer: {
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+    alignItems: 'center',
+  },
+  
+  modernViewSavedButton: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  
+  viewSavedContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  
+  modernViewSavedText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    flex: 1,
+    marginLeft: 12,
+  },
+  
+  analyzingAnimation: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  
+  analyzeIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+  },
+  
+  scanLine: {
+    position: 'absolute',
+    width: 80,
+    height: 2,
+    backgroundColor: '#13a4ec',
+    borderRadius: 1,
+  },
+  
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  
+  infoContainer: {
+    padding: 20,
   },
 });

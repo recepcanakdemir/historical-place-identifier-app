@@ -13,6 +13,7 @@ import {
   Vibration,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { getCurrentLocation } from '../services/locationService';
 
 export default function CameraScreen() {
@@ -160,18 +161,11 @@ export default function CameraScreen() {
     }
   };
 
-  const getFlashIcon = () => {
-    switch (flashMode) {
-      case 'off': return '⚡';
-      case 'on': return '💡';
-      case 'auto': return '🔆';
-      default: return '⚡';
-    }
-  };
 
   if (hasPermission === null) {
     return (
       <View style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" />
         <Text style={styles.loadingText}>Requesting camera permission...</Text>
       </View>
     );
@@ -179,37 +173,51 @@ export default function CameraScreen() {
 
   if (hasPermission === false) {
     return (
-      <SafeAreaView style={styles.permissionContainer}>
-        <View style={styles.permissionContent}>
-          <Text style={styles.permissionIcon}>📷</Text>
-          <Text style={styles.permissionTitle}>Camera Access Required</Text>
-          <Text style={styles.permissionText}>
-            We need access to your camera to analyze historical places.
-          </Text>
-          <TouchableOpacity 
-            style={styles.settingsButton}
-            onPress={() => {
-              Alert.alert(
-                'Camera Permission',
-                'Please enable camera access in Settings > LandmarkAI> Camera',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Go to Settings', onPress: () => {/* Open settings */} }
-                ]
-              );
-            }}
-          >
-            <Text style={styles.settingsButtonText}>Open Settings</Text>
-          </TouchableOpacity>
+      <View style={styles.permissionContainer}>
+        <StatusBar barStyle="light-content" backgroundColor="#000000" />
+        <SafeAreaView style={styles.permissionSafeArea}>
+          <View style={styles.permissionHeader}>
+            <TouchableOpacity 
+              style={styles.permissionBackButton} 
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
           
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.backButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+          <View style={styles.permissionContent}>
+            <View style={styles.permissionIconContainer}>
+              <Ionicons name="camera" size={64} color="#000000" />
+            </View>
+            <Text style={styles.permissionTitle}>Camera Access Required</Text>
+            <Text style={styles.permissionText}>
+              We need access to your camera to analyze historical places and landmarks.
+            </Text>
+            <TouchableOpacity 
+              style={styles.settingsButton}
+              onPress={() => {
+                Alert.alert(
+                  'Camera Permission',
+                  'Please enable camera access in Settings > LandmarkAI > Camera',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Go to Settings', onPress: () => {/* Open settings */} }
+                  ]
+                );
+              }}
+            >
+              <Text style={styles.settingsButtonText}>Open Settings</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.backButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
@@ -241,7 +249,7 @@ export default function CameraScreen() {
             style={styles.topButton}
             onPress={() => router.back()}
           >
-            <Text style={styles.topButtonIcon}>✕</Text>
+            <Ionicons name="close" size={24} color="#ffffff" />
           </TouchableOpacity>
           
           <View style={styles.topCenter}>
@@ -262,7 +270,11 @@ export default function CameraScreen() {
             style={[styles.topButton, flashMode !== 'off' && styles.activeButton]}
             onPress={toggleFlash}
           >
-            <Text style={styles.topButtonIcon}>{getFlashIcon()}</Text>
+            <Ionicons 
+              name={flashMode === 'off' ? 'flash-off' : flashMode === 'on' ? 'flash' : 'flash-outline'} 
+              size={20} 
+              color="#ffffff" 
+            />
           </TouchableOpacity>
         </SafeAreaView>
 
@@ -276,7 +288,7 @@ export default function CameraScreen() {
               router.back();
             }}
           >
-            <Text style={styles.galleryIcon}>🖼️</Text>
+            <Ionicons name="images" size={24} color="#ffffff" />
           </TouchableOpacity>
 
           {/* Capture Button */}
@@ -306,7 +318,7 @@ export default function CameraScreen() {
             style={styles.flipButton}
             onPress={toggleCamera}
           >
-            <Text style={styles.flipIcon}>🔄</Text>
+            <Ionicons name="camera-reverse" size={24} color="#ffffff" />
           </TouchableOpacity>
         </View>
 
@@ -350,50 +362,89 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  permissionSafeArea: {
+    flex: 1,
+  },
+  permissionHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  permissionBackButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   permissionContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
   },
-  permissionIcon: {
-    fontSize: 64,
-    marginBottom: 24,
+  permissionIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 32,
+    borderWidth: 2,
+    borderColor: 'rgba(124, 58, 237, 0.3)',
   },
   permissionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#fff',
     marginBottom: 16,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   permissionText: {
     fontSize: 16,
-    color: '#ccc',
+    color: '#d1d5db',
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 32,
+    marginBottom: 40,
+    fontWeight: '400',
+    paddingHorizontal: 8,
   },
   settingsButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#13a4ec',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 25,
     marginBottom: 16,
+    shadowColor: '#13a4ec',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    minWidth: 200,
+    alignItems: 'center',
   },
   settingsButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   backButton: {
     paddingHorizontal: 32,
     paddingVertical: 16,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    minWidth: 200,
+    alignItems: 'center',
   },
   backButtonText: {
-    color: '#007AFF',
+    color: '#d1d5db',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   
   // Camera Styles
@@ -422,18 +473,15 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    backdropFilter: 'blur(10px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   activeButton: {
-    backgroundColor: 'rgba(255,255,255,0.3)',
-  },
-  topButtonIcon: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: '600',
+    backgroundColor: 'rgba(124, 58, 237, 0.6)',
+    borderColor: 'rgba(124, 58, 237, 0.8)',
   },
   topCenter: {
     alignItems: 'center',
@@ -478,15 +526,12 @@ const styles = StyleSheet.create({
   galleryButton: {
     width: 50,
     height: 50,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  galleryIcon: {
-    fontSize: 24,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   
   // Capture Button
@@ -497,11 +542,16 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
     borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   captureButtonActive: {
     backgroundColor: 'rgba(255,255,255,0.4)',
@@ -517,15 +567,12 @@ const styles = StyleSheet.create({
   flipButton: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  flipIcon: {
-    fontSize: 24,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   
   // Center Guide
@@ -579,16 +626,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   instructionsBubble: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 25,
     maxWidth: 280,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   instructionsText: {
     color: '#fff',
     fontSize: 14,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });

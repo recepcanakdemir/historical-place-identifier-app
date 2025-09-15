@@ -91,29 +91,25 @@ export default function RootLayout() {
         <Stack.Screen 
           name="camera" 
           options={{ 
-            title: 'Take Photo',
-            headerShown: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 
           name="result" 
           options={{ 
-            title: 'Place Information',
-            headerShown: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 
           name="saved" 
           options={{ 
-            title: 'Saved Places',
-            headerShown: true
+            headerShown: false
           }} 
         />
         <Stack.Screen 
           name="settings" 
           options={{ 
-            title: 'Settings',
-            headerShown: true
+            headerShown: false
           }} 
         />
       </Stack>

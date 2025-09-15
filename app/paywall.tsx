@@ -5,14 +5,15 @@ import {
     ActivityIndicator,
     Alert,
     Linking,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Switch,
     Text,
     TouchableOpacity,
     View,
+    StatusBar,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { hasFreeTrialBeenUsed, startFreeTrialSession } from '../services/accessService';
 import { checkSubscriptionStatus, purchaseSubscription } from '../services/subscriptionService';
 import { getUsageStats } from '../services/usageService';
@@ -318,17 +319,18 @@ export default function PaywallScreen() {
     // If already premium, show special view
     if (subscriptionStatus?.isPremium && source !== 'onboarding') {
         return (
-            <SafeAreaView style={styles.container}>
-                <View style={styles.header}>
-                    <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                        <Text style={styles.closeButtonText}>✕</Text>
+            <View style={styles.container}>
+                <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+                <View style={styles.modernHeader}>
+                    <TouchableOpacity style={styles.modernCloseButton} onPress={handleClose}>
+                        <Ionicons name="close" size={24} color="#6B7280" />
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.premiumActiveContainer}>
-                    <View style={styles.iconContainer}>
-                        <View style={styles.iconBackground}>
-                            <Text style={styles.logoEmoji}>🏛️</Text>
+                    <View style={styles.modernIconContainer}>
+                        <View style={styles.modernIconBackground}>
+                            <Ionicons name="library" size={32} color="#FFFFFF" />
                         </View>
                     </View>
 
@@ -344,48 +346,62 @@ export default function PaywallScreen() {
                         <Text style={styles.continueButtonText}>Continue Exploring</Text>
                     </TouchableOpacity>
                 </View>
-            </SafeAreaView>
+            </View>
         );
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
             <ScrollView
-                style={styles.scrollView}
+                style={styles.content}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Header - Always show close button, logic is handled in handleClose */}
-                <View style={styles.header}>
-                    <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
-                        <Text style={styles.closeButtonText}>✕</Text>
+                {/* Modern Header */}
+                <View style={styles.modernHeader}>
+                    <TouchableOpacity style={styles.modernCloseButton} onPress={handleClose}>
+                        <Ionicons name="close" size={24} color="#6B7280" />
                     </TouchableOpacity>
+                </View>
+
+                {/* Hero Section */}
+                <View style={styles.heroSection}>
+                    {/* Modern App Icon */}
+                    <View style={styles.modernIconContainer}>
+                        <View style={styles.modernIconBackground}>
+                            <Ionicons name="library" size={32} color="#FFFFFF" />
+                        </View>
+                    </View>
+
+                    {/* Title & Subtitle */}
+                    <Text style={styles.modernTitle}>{content.title}</Text>
+                    <Text style={styles.modernSubtitle}>{content.subtitle}</Text>
                 </View>
 
                 {/* Main Content */}
                 <View style={styles.content}>
-                    {/* App Icon */}
-                    <View style={styles.iconContainer}>
-                        <View style={styles.iconBackground}>
-                            <Text style={styles.logoEmoji}>🏛️</Text>
+                    {/* Modern Features */}
+                <View style={styles.modernFeaturesSection}>
+                    <View style={styles.modernFeatureItem}>
+                        <View style={styles.featureIconContainer}>
+                            <Ionicons name="infinite" size={20} color="#000000" />
                         </View>
+                        <Text style={styles.modernFeatureText}>Unlimited landmark analysis</Text>
                     </View>
-
-                    {/* Title */}
-                    <Text style={styles.title}>{content.title}</Text>
-                    <Text style={styles.subtitle}>{content.subtitle}</Text>
-
-                    {/* Features */}
-                    <View style={styles.featuresSection}>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>🏛️</Text>
-                            <Text style={styles.featureText}>Identify unlimited landmarks</Text>
+                    <View style={styles.modernFeatureItem}>
+                        <View style={styles.featureIconContainer}>
+                            <Ionicons name="flash" size={20} color="#000000" />
                         </View>
-                        <View style={styles.featureItem}>
-                            <Text style={styles.featureIcon}>🔓</Text>
-                            <Text style={styles.featureText}>Remove annoying paywalls</Text>
-                        </View>
+                        <Text style={styles.modernFeatureText}>Priority AI processing</Text>
                     </View>
+                    <View style={styles.modernFeatureItem}>
+                        <View style={styles.featureIconContainer}>
+                            <Ionicons name="download" size={20} color="#000000" />
+                        </View>
+                        <Text style={styles.modernFeatureText}>Advanced saving features</Text>
+                    </View>
+                </View>
 
                     {/* Usage Stats */}
                     {content.showUsageStats && usageStats && (
@@ -408,31 +424,43 @@ export default function PaywallScreen() {
                     {loadingPackages ? (
                         <ActivityIndicator size="large" color="#4A90E2" />
                     ) : (
-                        <View style={styles.pricingSection}>
-                            <Text style={styles.sectionTitle}>Choose Your Plan</Text>
+                        <View style={styles.modernPricingSection}>
+                            <Text style={styles.modernSectionTitle}>Choose Your Plan</Text>
 
                             {/* Lifetime Plan */}
                             <TouchableOpacity
-                                style={[styles.planCard, selectedPlan === 'lifetime' && styles.selectedPlanCard]}
+                                style={[styles.modernPlanCard, selectedPlan === 'lifetime' && styles.modernSelectedPlanCard]}
                                 onPress={() => handlePlanChange('lifetime')}
                             >
-                                {/* Existing UI elements */}
-                                <Text style={styles.planTitle}>Lifetime Plan</Text>
-                                <Text style={styles.planPrice}>{getPackageInfo('lifetime').price}</Text>
-                                <Text style={styles.planSubtext}>One-time payment</Text>
+                                <View style={styles.planHeader}>
+                                    <View style={styles.planTitleContainer}>
+                                        <Text style={styles.modernPlanTitle}>Lifetime</Text>
+                                        <View style={styles.popularBadge}>
+                                            <Text style={styles.popularText}>POPULAR</Text>
+                                        </View>
+                                    </View>
+                                    <View style={[styles.radioButton, selectedPlan === 'lifetime' && styles.radioButtonSelected]}>
+                                        {selectedPlan === 'lifetime' && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                                    </View>
+                                </View>
+                                <Text style={styles.modernPlanPrice}>{getPackageInfo('lifetime').price}</Text>
+                                <Text style={styles.modernPlanSubtext}>One-time payment • No recurring fees</Text>
                             </TouchableOpacity>
 
                             {/* Weekly Plan */}
                             <TouchableOpacity
-                                style={[styles.planCard, selectedPlan === 'weekly' && styles.selectedPlanCard]}
+                                style={[styles.modernPlanCard, selectedPlan === 'weekly' && styles.modernSelectedPlanCard]}
                                 onPress={() => handlePlanChange('weekly')}
                             >
-                                {/* Existing UI elements */}
-                                <Text style={styles.planTitle}>Weekly Plan</Text>
-                                <Text style={styles.planPrice}>{getPackageInfo('weekly').price} / week</Text>
-                                <Text style={styles.planSubtext}>per week - auto renewable</Text>
+                                <View style={styles.planHeader}>
+                                    <Text style={styles.modernPlanTitle}>Weekly</Text>
+                                    <View style={[styles.radioButton, selectedPlan === 'weekly' && styles.radioButtonSelected]}>
+                                        {selectedPlan === 'weekly' && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+                                    </View>
+                                </View>
+                                <Text style={styles.modernPlanPrice}>{getPackageInfo('weekly').price}/week</Text>
+                                <Text style={styles.modernPlanSubtext}>Auto-renewable • Cancel anytime</Text>
                             </TouchableOpacity>
-                                <Text style={styles.noPaymentText}>Subscription automatically renews unless cancel.</Text>
                         </View>
                     )}
 
@@ -457,9 +485,9 @@ export default function PaywallScreen() {
 
                     {/* Action Buttons */}
                     <View style={styles.actionsSection}>
-                        {/* Premium Button */}
+                        {/* Modern Premium Button */}
                         <TouchableOpacity
-                            style={[styles.premiumButton, loading && styles.premiumButtonDisabled]}
+                            style={[styles.modernPremiumButton, loading && styles.modernPremiumButtonDisabled]}
                             onPress={() => handlePurchase(selectedPlan)}
                             disabled={loading}
                             activeOpacity={0.8}
@@ -467,25 +495,24 @@ export default function PaywallScreen() {
                             {loading ? (
                                 <ActivityIndicator size="small" color="#FFFFFF" />
                             ) : (
-                                <>
-
-                                    <Text style={styles.premiumButtonText}>
-                                        {selectedPlan === 'lifetime' ? 'Get Lifetime Access - $29.99' : 'Start Premium Weekly - $5.99'}
+                                <View style={styles.premiumButtonContent}>
+                                    <Text style={styles.modernPremiumButtonText}>
+                                        {selectedPlan === 'lifetime' ? 'Get Lifetime Access' : 'Start Premium'}
                                     </Text>
-                                    <Text style={styles.buttonArrow}>→</Text>
-                                </>
+                                    <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+                                </View>
                             )}
                         </TouchableOpacity>
 
-                        {/* Free Analyses Button - Show when toggle is enabled and free trial hasn't been used */}
+                        {/* Modern Free Button */}
                         {freeAnalysesEnabled && !freeTrialUsed && (
                             <TouchableOpacity
-                                style={styles.freeButton}
+                                style={styles.modernFreeButton}
                                 onPress={startFreeAnalyses}
                                 activeOpacity={0.8}
                             >
-                                <Text style={styles.freeButtonText}>
-                                    {source === 'onboarding' ? 'Start with 1 Free Analysis' : 'Get 1 Free Analysis'}
+                                <Text style={styles.modernFreeButtonText}>
+                                    {source === 'onboarding' ? 'Start with 1 Free Analysis' : 'Try 1 Free Analysis'}
                                 </Text>
                             </TouchableOpacity>
                         )}
@@ -533,66 +560,262 @@ export default function PaywallScreen() {
 
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F8F9FA',
+        backgroundColor: '#ffffff',
     },
-    scrollView: {
+    
+    // Modern Header
+    modernHeader: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        paddingHorizontal: 20,
+        paddingTop: 20,
+        paddingBottom: 10,
+    },
+    modernCloseButton: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        backgroundColor: '#F3F4F6',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    
+    // Content
+    content: {
         flex: 1,
+        paddingHorizontal: 20,
     },
     scrollContent: {
         paddingBottom: 40,
     },
-
-    // Header
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'flex-end',
-        padding: 20,
+    
+    // Hero Section
+    heroSection: {
+        alignItems: 'center',
+        paddingVertical: 40,
     },
-    closeButton: {
-        width: 32,
-        height: 32,
-        borderRadius: 16,
-        backgroundColor: '#E0E0E0',
+    modernIconContainer: {
+        marginBottom: 24,
+    },
+    modernIconBackground: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: '#13a4ec',
         justifyContent: 'center',
         alignItems: 'center',
-    },
-    closeButtonText: {
-        fontSize: 18,
-        color: '#666',
-    },
-
-    // Content
-    content: {
-        paddingHorizontal: 20,
-        alignItems: 'center',
-    },
-    iconContainer: {
-        marginBottom: 20,
-    },
-    iconBackground: {
-        width: 100,
-        height: 100,
-        borderRadius: 25,
-        backgroundColor: '#4A90E2',
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: '#000',
+        shadowColor: '#13a4ec',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 4,
     },
-    logoEmoji: {
-        fontSize: 40,
-        color: '#FFFFFF',
+    modernTitle: {
+        fontSize: 28,
+        fontWeight: '700',
+        color: '#111827',
+        textAlign: 'center',
+        marginBottom: 8,
+        letterSpacing: -0.5,
     },
+    modernSubtitle: {
+        fontSize: 16,
+        color: '#6B7280',
+        textAlign: 'center',
+        lineHeight: 24,
+        marginBottom: 40,
+    },
+    
+    // Modern Features
+    modernFeaturesSection: {
+        marginBottom: 40,
+    },
+    modernFeatureItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        marginBottom: 8,
+    },
+    featureIconContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: '#F3F4F6',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+    },
+    modernFeatureText: {
+        fontSize: 16,
+        color: '#374151',
+        fontWeight: '500',
+        flex: 1,
+    },
+    
+    // Modern Pricing
+    modernPricingSection: {
+        marginBottom: 32,
+    },
+    modernSectionTitle: {
+        fontSize: 20,
+        fontWeight: '700',
+        color: '#111827',
+        textAlign: 'center',
+        marginBottom: 24,
+    },
+    modernPlanCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 12,
+        borderWidth: 2,
+        borderColor: '#E5E7EB',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    modernSelectedPlanCard: {
+        borderColor: '#13a4ec',
+        backgroundColor: '#FAFBFF',
+    },
+    planHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    planTitleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    modernPlanTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#111827',
+    },
+    popularBadge: {
+        backgroundColor: '#10B981',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 8,
+    },
+    popularText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#FFFFFF',
+        letterSpacing: 0.5,
+    },
+    radioButton: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: '#D1D5DB',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    radioButtonSelected: {
+        backgroundColor: '#13a4ec',
+        borderColor: '#13a4ec',
+    },
+    modernPlanPrice: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#13a4ec',
+        marginBottom: 4,
+    },
+    modernPlanSubtext: {
+        fontSize: 14,
+        color: '#6B7280',
+        fontWeight: '400',
+    },
+    
+    // Modern Buttons
+    modernPremiumButton: {
+        backgroundColor: '#13a4ec',
+        borderRadius: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        marginBottom: 12,
+        shadowColor: '#13a4ec',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    modernPremiumButtonDisabled: {
+        backgroundColor: '#9CA3AF',
+        shadowOpacity: 0,
+    },
+    premiumButtonContent: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        gap: 8,
+    },
+    modernPremiumButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+        letterSpacing: 0.3,
+    },
+    modernFreeButton: {
+        backgroundColor: '#F3F4F6',
+        borderRadius: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 24,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    modernFreeButtonText: {
+        color: '#374151',
+        fontSize: 16,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    
+    // Premium active styles
+    premiumActiveContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+    },
+    premiumActiveText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#374151',
+        textAlign: 'center',
+        marginVertical: 20,
+        lineHeight: 26,
+    },
+    continueButton: {
+        backgroundColor: '#13a4ec',
+        borderRadius: 16,
+        paddingVertical: 16,
+        paddingHorizontal: 32,
+        marginTop: 20,
+    },
+    continueButtonText: {
+        color: '#FFFFFF',
+        fontSize: 16,
+        fontWeight: '700',
+        textAlign: 'center',
+    },
+    
+    // Legacy styles (keeping for compatibility)
     title: {
         fontSize: 28,
         fontWeight: '700',
@@ -606,39 +829,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 30,
         lineHeight: 22,
-    },
-
-    // Premium Active State
-    premiumActiveContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 40,
-    },
-    premiumActiveTitle: {
-        fontSize: 28,
-        fontWeight: '700',
-        color: '#2E7D32',
-        marginBottom: 16,
-        textAlign: 'center',
-    },
-    premiumActiveText: {
-        fontSize: 18,
-        color: '#2E7D32',
-        textAlign: 'center',
-        marginBottom: 40,
-        lineHeight: 26,
-    },
-    continueButton: {
-        backgroundColor: '#4CAF50',
-        borderRadius: 14,
-        paddingVertical: 16,
-        paddingHorizontal: 32,
-    },
-    continueButtonText: {
-        color: '#FFFFFF',
-        fontSize: 16,
-        fontWeight: '600',
     },
 
     // Features
@@ -812,18 +1002,18 @@ const styles = StyleSheet.create({
         marginBottom: 30,
     },
     premiumButton: {
-        backgroundColor: '#4A90E2',
-        borderRadius: 14,
+        backgroundColor: '#13a4ec',
+        borderRadius: 20,
         padding: 18,
         marginBottom: 12,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: '#4A90E2',
+        shadowColor: '#13a4ec',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.15,
         shadowRadius: 8,
-        elevation: 6,
+        elevation: 4,
     },
     premiumButtonDisabled: {
         backgroundColor: '#999999',
@@ -844,15 +1034,21 @@ const styles = StyleSheet.create({
     freeButton: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: '#4A90E2',
-        borderRadius: 14,
+        borderColor: '#13a4ec',
+        borderRadius: 20,
         padding: 16,
         alignItems: 'center',
+        shadowColor: '#13a4ec',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
     },
     freeButtonText: {
-        color: '#4A90E2',
+        color: '#13a4ec',
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: '700',
+        letterSpacing: 0.3,
     },
 
     // Terms
@@ -871,9 +1067,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     linkText: {
-        color: '#4A90E2',
+        color: '#13a4ec',
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
         textDecorationLine: 'underline',
     },
 });

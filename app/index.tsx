@@ -1,38 +1,33 @@
-// app/index.tsx - Updated with New Pricing Logic
+// app/index.tsx - Modern UI Design
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import React, { JSX, useRef, useState } from 'react';
+import React, { JSX, useState } from 'react';
 import {
   Alert,
-  Animated,
   Dimensions,
-  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
+  StatusBar
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { checkAppAccess, getAccessStatus } from '../services/accessService';
 import { getCurrentLanguage, getUITexts } from '../services/languageService';
 import { checkSubscriptionStatus } from '../services/subscriptionService';
 import { getUsageStats } from '../services/usageService';
 import { SubscriptionStatus, UsageStats } from '../types';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const [menuVisible, setMenuVisible] = useState<boolean>(false);
-  const [currentLang, setCurrentLang] = useState<string>('en');
   const [uiTexts, setUITexts] = useState(getUITexts('en'));
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [trialInfo, setTrialInfo] = useState<any>(null);
-  const slideAnim = useRef(new Animated.Value(-280)).current;
-  const insets = useSafeAreaInsets();
 
   // Helper function to check trial status
   const checkTrialStatus = async () => {
@@ -118,7 +113,6 @@ export default function HomeScreen() {
     try {
       // Load language
       const language = await getCurrentLanguage();
-      setCurrentLang(language);
       setUITexts(getUITexts(language));
       
       // Load usage stats
@@ -168,122 +162,33 @@ export default function HomeScreen() {
   };
 
   const takePhoto = (): void => {
-    closeMenu();
-    setTimeout(() => requestLocationAndOpenCamera(), 100);
+    requestLocationAndOpenCamera();
   };
 
   const pickImage = async (): Promise<void> => {
-    closeMenu();
-    setTimeout(async () => {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'images',
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 1,
-      });
-
-      if (!result.canceled) {
-        router.push({
-          pathname: '/result',
-          params: { 
-            imageUri: result.assets[0].uri,
-            fromGallery: 'true'
-          }
-        });
-      }
-    }, 100);
-  };
-
-  const openMenu = (): void => {
-    setMenuVisible(true);
-    Animated.timing(slideAnim, {
-      toValue: 0,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const closeMenu = (): void => {
-    Animated.timing(slideAnim, {
-      toValue: -280,
-      duration: 250,
-      useNativeDriver: true,
-    }).start(() => {
-      setMenuVisible(false);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: 'images',
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
     });
+
+    if (!result.canceled) {
+      router.push({
+        pathname: '/result',
+        params: { 
+          imageUri: result.assets[0].uri,
+          fromGallery: 'true'
+        }
+      });
+    }
   };
 
-  const navigateToSaved = (): void => {
-    closeMenu();
-    setTimeout(() => router.push('/saved'), 200);
-  };
-
-  const navigateToSettings = (): void => {
-    closeMenu();
-    setTimeout(() => router.push('/settings'), 200);
-  };
 
   const navigateToPremium = (): void => {
-    closeMenu();
-    setTimeout(() => router.push('/paywall?source=upgrade'), 200);
+    router.push('/paywall?source=upgrade');
   };
 
-  const renderPremiumBanner = (): JSX.Element | null => {
-    // Check if user is premium
-    if (subscriptionStatus?.isPremium || usageStats?.isPremium) {
-      const planType = subscriptionStatus?.planType || 'premium';
-      return (
-        <View style={styles.premiumActiveBanner}>
-          <Text style={styles.premiumActiveText}>
-            ✨ {planType === 'lifetime' ? 'Lifetime Premium' : 'Premium Active'}
-          </Text>
-          <Text style={styles.premiumActiveSubtext}>Unlimited analyses</Text>
-        </View>
-      );
-    }
-
-    // Check if trial is active
-    if (trialInfo?.isActive) {
-      return (
-        <View style={styles.trialBanner}>
-          <Text style={styles.trialBannerText}>🎁 Free Trial Active</Text>
-          <Text style={styles.trialBannerSubtext}>
-            {trialInfo.daysRemaining} day{trialInfo.daysRemaining !== 1 ? 's' : ''} remaining
-          </Text>
-        </View>
-      );
-    }
-
-    const remaining = Math.max(0, usageStats?.remainingFreeAnalyses || 0);
-
-    if (remaining === 0) {
-      return (
-        <TouchableOpacity 
-          style={styles.upgradeBanner}
-          onPress={navigateToPremium}
-        >
-          <Text style={styles.upgradeBannerText}>🔒 No free analysis left</Text>
-          <Text style={styles.upgradeBannerSubtext}>Tap to upgrade to Premium</Text>
-        </TouchableOpacity>
-      );
-    }
-
-    if (remaining <= 1) {
-      return (
-        <View style={styles.warningBanner}>
-          <Text style={styles.warningBannerText}>⚡ {remaining} free analysis left</Text>
-          <TouchableOpacity 
-            style={styles.miniUpgradeButton}
-            onPress={navigateToPremium}
-          >
-            <Text style={styles.miniUpgradeText}>Upgrade</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return null;
-  };
 
   const renderUsageIndicator = (): JSX.Element => {
     // First check subscription status, then usage stats
@@ -335,20 +240,31 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header with Hamburger */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.hamburgerButton} onPress={openMenu}>
-          <View style={styles.hamburgerLine} />
-          <View style={styles.hamburgerLine} />
-          <View style={styles.hamburgerLine} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{uiTexts.appName || 'LandmarkAI'}</Text>
-        <View style={styles.headerPlaceholder} />
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+      
+      {/* Clean Header */}
+      <View style={styles.headerContainer}>
+        <SafeAreaView>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>{uiTexts.appName || 'LandmarkAI'}</Text>
+            
+            {/* Right side - Premium status or Pro button */}
+            <View style={styles.headerRight}>
+              {(subscriptionStatus?.isPremium || usageStats?.isPremium) ? (
+                <View style={styles.unlimitedIndicator}>
+                  <Ionicons name="infinite" size={20} color="#10B981" />
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.proButton} onPress={navigateToPremium}>
+                  <Text style={styles.proButtonText}>PRO</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </SafeAreaView>
       </View>
 
-      {/* Premium/Usage Banner */}
-      {renderPremiumBanner()}
 
       {/* Main Content with ScrollView */}
       <ScrollView 
@@ -356,155 +272,139 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.logoContainer}>
-          <View style={styles.logoBackground}>
-            <Text style={styles.logoEmoji}>🏛️</Text>
+        {/* Travel Hero Section */}
+        <View style={styles.heroSection}>
+          <View style={styles.logoContainer}>
+            <View style={styles.logoBackground}>
+              <Ionicons name="map" size={48} color="#000000" />
+            </View>
+          </View>
+
+          <Text style={styles.title}>{uiTexts.discoverHistory || 'Discover History'}</Text>
+          <Text style={styles.subtitle}>
+            {uiTexts.subtitle || 'Your AI-powered travel companion for exploring historical landmarks'}
+          </Text>
+        </View>
+
+        {/* Usage Stats Card */}
+        <View style={styles.usageCard}>
+          {renderUsageIndicator()}
+        </View>
+
+        {/* Quick Actions - Travel Style */}
+        <View style={styles.quickActionsSection}>
+          <Text style={styles.sectionTitle}>Start Your Journey</Text>
+          
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.primaryAction} onPress={takePhoto}>
+              <View style={styles.actionIconContainer}>
+                <Ionicons name="camera" size={32} color="#ffffff" />
+              </View>
+              <Text style={styles.actionTitle}>Capture</Text>
+              <Text style={styles.actionSubtitle}>Take a photo</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.secondaryAction} onPress={pickImage}>
+              <View style={styles.actionIconContainer}>
+                <Ionicons name="images" size={32} color="#ffffff" />
+              </View>
+              <Text style={styles.actionTitle}>Explore</Text>
+              <Text style={styles.actionSubtitle}>Choose photo</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <Text style={styles.title}>{uiTexts.discoverHistory || 'Discover History'}</Text>
-        <Text style={styles.subtitle}>
-          {uiTexts.subtitle || 'Explore monuments and landmarks with AI-powered historical insights'}
-        </Text>
-
-        {/* Usage Indicator */}
-        {renderUsageIndicator()}
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.primaryButton} onPress={takePhoto}>
-            <View style={styles.buttonContent}>
-              <Text style={styles.buttonIcon}>📷</Text>
-              <View style={styles.buttonTextContainer}>
-                <Text style={styles.buttonText}>{uiTexts.takePhoto || 'Take Photo'}</Text>
-                <Text style={styles.buttonSubtext}>{uiTexts.withLocation || 'with location detection'}</Text>
+        {/* Travel Features */}
+        <View style={styles.featuresSection}>
+          <Text style={styles.sectionTitle}>Why Travelers Love Us</Text>
+          <View style={styles.featuresGrid}>
+            <View style={styles.featureCard}>
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="language" size={24} color="#000000" />
               </View>
+              <Text style={styles.featureTitle}>Multi-Language</Text>
+              <Text style={styles.featureText}>{uiTexts.languagesSupported || '10+ languages supported'}</Text>
             </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.secondaryButton} onPress={pickImage}>
-            <View style={styles.buttonContent}>
-              <Text style={styles.buttonIcon}>🖼️</Text>
-              <View style={styles.buttonTextContainer}>
-                <Text style={styles.buttonText}>{uiTexts.chooseGallery || 'Choose from Gallery'}</Text>
-                <Text style={styles.buttonSubtext}>{uiTexts.analyzeAny || 'analyze any image'}</Text>
+            
+            <View style={styles.featureCard}>
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="location" size={24} color="#28a745" />
               </View>
+              <Text style={styles.featureTitle}>Location Smart</Text>
+              <Text style={styles.featureText}>{uiTexts.locationAware || 'Context-aware discoveries'}</Text>
             </View>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.featuresList}>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>🌍</Text>
-            <Text style={styles.featureText}>{uiTexts.languagesSupported || '10+ languages supported'}</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>📍</Text>
-            <Text style={styles.featureText}>{uiTexts.locationAware || 'Location-aware analysis'}</Text>
-          </View>
-          <View style={styles.featureItem}>
-            <Text style={styles.featureIcon}>💾</Text>
-            <Text style={styles.featureText}>{uiTexts.saveDiscoveries || 'Save your discoveries'}</Text>
+            
+            <View style={styles.featureCard}>
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="bookmark" size={24} color="#ffc107" />
+              </View>
+              <Text style={styles.featureTitle}>Save & Share</Text>
+              <Text style={styles.featureText}>{uiTexts.saveDiscoveries || 'Build your travel journal'}</Text>
+            </View>
+            
+            <View style={styles.featureCard}>
+              <View style={styles.featureIconContainer}>
+                <Ionicons name="sparkles" size={24} color="#dc3545" />
+              </View>
+              <Text style={styles.featureTitle}>AI Guide</Text>
+              <Text style={styles.featureText}>Instant historical insights</Text>
+            </View>
           </View>
         </View>
       </ScrollView>
 
-      {/* Hamburger Menu Modal */}
-      {menuVisible && (
-        <Modal
-          animationType="none"
-          transparent={true}
-          visible={menuVisible}
-          onRequestClose={closeMenu}
-          statusBarTranslucent={true}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity 
-              style={styles.modalBackground} 
-              onPress={closeMenu}
-              activeOpacity={1}
-            />
+      {/* Bottom Navigation Bar */}
+      <View style={styles.bottomNavContainer}>
+        <SafeAreaView style={styles.bottomNavSafeArea}>
+          <View style={styles.bottomNav}>
             
-            <Animated.View 
-              style={[
-                styles.menuContainer,
-                { 
-                  transform: [{ translateX: slideAnim }],
-                  paddingTop: insets.top,
-                }
-              ]}
-            >
-              <View style={[styles.menuHeader, { marginTop: 0 }]}>
-                <Text style={styles.menuTitle}>Menu</Text>
-                <TouchableOpacity style={styles.closeButton} onPress={closeMenu}>
-                  <Text style={styles.closeButtonText}>×</Text>
-                </TouchableOpacity>
+            {/* Saved */}
+            <TouchableOpacity style={styles.navItem} onPress={() => router.push('/saved')} activeOpacity={0.7}>
+              <View style={styles.navItemContainer}>
+                <Ionicons name="bookmark-outline" size={24} color="#8E8E93" />
+                <Text style={styles.navLabel}>Saved</Text>
               </View>
+            </TouchableOpacity>
 
-              <View style={styles.menuItems}>
-                {/* Premium Status in Menu */}
-                <View style={styles.menuPremiumStatus}>
-                  {subscriptionStatus?.isPremium ? (
-                    <Text style={styles.menuPremiumActiveText}>
-                      ✨ {subscriptionStatus.planType === 'lifetime' ? 'Lifetime' : 'Premium'} Member
-                    </Text>
-                  ) : trialInfo?.isActive ? (
-                    <Text style={styles.menuTrialActiveText}>
-                      🎁 Free Trial ({trialInfo.daysRemaining} days left)
-                    </Text>
-                  ) : (
-                    <TouchableOpacity 
-                      style={styles.menuUpgradeButton}
-                      onPress={navigateToPremium}
-                    >
-                      <Text style={styles.menuUpgradeText}>⭐ Upgrade to Premium</Text>
-                    </TouchableOpacity>
-                  )}
+            {/* Home - Active (enlarged, centered) */}
+            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+              <View style={styles.activeNavItemContainer}>
+                <View style={styles.activeNavBackground}>
+                  <Ionicons name="home" size={28} color="#ffffff" />
                 </View>
-
-                <TouchableOpacity style={styles.menuItem} onPress={navigateToSaved}>
-                  <Text style={styles.menuIcon}>💾</Text>
-                  <Text style={styles.menuItemText}>Saved Places</Text>
-                  <Text style={styles.menuArrow}>›</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.menuItem} onPress={navigateToSettings}>
-                  <Text style={styles.menuIcon}>⚙️</Text>
-                  <Text style={styles.menuItemText}>Settings</Text>
-                  <Text style={styles.menuArrow}>›</Text>
-                </TouchableOpacity>
-
-                {!subscriptionStatus?.isPremium && (
-                  <TouchableOpacity style={styles.menuItem} onPress={navigateToPremium}>
-                    <Text style={styles.menuIcon}>⭐</Text>
-                    <Text style={styles.menuItemText}>Premium</Text>
-                    <Text style={styles.menuArrow}>›</Text>
-                  </TouchableOpacity>
-                )}
-
-                <View style={styles.menuDivider} />
-
-                <View style={styles.menuFooter}>
-                  <Text style={styles.menuFooterText}>LandmarkAI</Text>
-                  <Text style={styles.menuFooterSubtext}>v1.0.0</Text>
-                  {usageStats && (
-                    <Text style={styles.menuFooterUsage}>
-                      {usageStats.totalAnalyses} total analyses
-                    </Text>
-                  )}
-                </View>
+                <Text style={styles.activeNavLabel}>Home</Text>
               </View>
-            </Animated.View>
+            </TouchableOpacity>
+
+            {/* Settings */}
+            <TouchableOpacity style={styles.navItem} onPress={() => router.push('/settings')} activeOpacity={0.7}>
+              <View style={styles.navItemContainer}>
+                <Ionicons name="settings-outline" size={24} color="#8E8E93" />
+                <Text style={styles.navLabel}>Settings</Text>
+              </View>
+            </TouchableOpacity>
+
           </View>
-        </Modal>
-      )}
-    </SafeAreaView>
+        </SafeAreaView>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#ffffff',
+  },
+  
+  // Clean White Header Styles
+  headerContainer: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   header: {
     flexDirection: 'row',
@@ -512,176 +412,240 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  hamburgerButton: {
-    width: 30,
-    height: 30,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  hamburgerLine: {
-    width: 25,
-    height: 3,
-    backgroundColor: '#333',
-    borderRadius: 2,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#2c3e50',
+    letterSpacing: 0.5,
+    flex: 1,
   },
-  headerPlaceholder: {
-    width: 30,
+  headerRight: {
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unlimitedIndicator: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  proButton: {
+    backgroundColor: '#13a4ec',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    shadowColor: '#13a4ec',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    minWidth: 45,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+    lineHeight: 12,
   },
   
-  // Premium/Trial Banners
+  // Light Banners
   premiumActiveBanner: {
-    backgroundColor: '#4A90E2',
-    paddingVertical: 12,
+    backgroundColor: '#13a4ec',
+    paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
+    shadowColor: '#13a4ec',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   premiumActiveText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   premiumActiveSubtext: {
     color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
-    marginTop: 2,
+    marginTop: 4,
+    fontWeight: '500',
   },
   trialBanner: {
-    backgroundColor: '#4CAF50',
-    paddingVertical: 12,
+    backgroundColor: '#28a745',
+    paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
+    shadowColor: '#28a745',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
   },
   trialBannerText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   trialBannerSubtext: {
     color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
-    marginTop: 2,
+    marginTop: 4,
+    fontWeight: '500',
   },
   upgradeBanner: {
     backgroundColor: '#FF6B6B',
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   upgradeBannerText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   upgradeBannerSubtext: {
     color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
-    marginTop: 2,
+    marginTop: 4,
+    fontWeight: '500',
   },
   warningBanner: {
     backgroundColor: '#FFA500',
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    shadowColor: '#FFA500',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   warningBannerText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   miniUpgradeButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   miniUpgradeText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.3,
   },
   
   content: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 40,
     paddingBottom: 40,
+  },
+  
+  // Hero Section
+  heroSection: {
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 24,
+    alignItems: 'center',
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 30,
+    marginBottom: 24,
   },
   logoBackground: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'white',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#4A90E2',
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 8,
-  },
-  logoEmoji: {
-    fontSize: 48,
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: '#e9ecef',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1a1a1a',
     textAlign: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 20,
     lineHeight: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
+    fontWeight: '400',
+  },
+  
+  // Usage Card
+  usageCard: {
+    marginHorizontal: 24,
+    marginBottom: 24,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   
   // Usage Indicator
   usageIndicator: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 30,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
   usageText: {
     fontSize: 16,
-    color: '#666',
-    fontWeight: '500',
-    marginBottom: 8,
+    color: '#333',
+    fontWeight: '600',
+    marginBottom: 12,
+    textAlign: 'center',
   },
   trialProgress: {
-    backgroundColor: '#E8F5E8',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: '#f0f8ff',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   trialProgressText: {
     fontSize: 14,
@@ -691,6 +655,7 @@ const styles = StyleSheet.create({
   progressBar: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 8,
   },
   progressDot: {
     width: 12,
@@ -701,213 +666,199 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF6B6B',
   },
   progressDotRemaining: {
-    backgroundColor: '#4A90E2',
+    backgroundColor: '#13a4ec',
   },
   
-  buttonContainer: {
-    gap: 20,
-    marginBottom: 40,
+  // Travel Quick Actions
+  quickActionsSection: {
+    paddingHorizontal: 24,
+    marginBottom: 32,
   },
-  primaryButton: {
-    backgroundColor: '#4A90E2',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#4A90E2',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  secondaryButton: {
-    backgroundColor: '#50C878',
-    borderRadius: 16,
-    padding: 20,
-    shadowColor: '#50C878',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  buttonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  buttonIcon: {
-    fontSize: 28,
-    marginRight: 15,
-  },
-  buttonTextContainer: {
-    flex: 1,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  buttonSubtext: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-  },
-  featuresList: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  featureIcon: {
-    fontSize: 20,
-    marginRight: 12,
-    width: 24,
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2c3e50',
+    marginBottom: 20,
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
-  featureText: {
-    fontSize: 16,
-    color: '#555',
-    fontWeight: '500',
-  },
-  
-  // Modal and Menu styles (keeping existing styles)
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  actionButtons: {
     flexDirection: 'row',
-  },
-  modalBackground: {
-    flex: 1,
-  },
-  menuContainer: {
-    width: 280,
-    backgroundColor: 'white',
-    height: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 10,
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-  },
-  menuHeader: {
-    flexDirection: 'row',
+    gap: 16,
     justifyContent: 'space-between',
+  },
+  primaryAction: {
+    flex: 1,
+    backgroundColor: '#13a4ec',
+    borderRadius: 20,
+    padding: 24,
     alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#4A90E2',
+    shadowColor: '#13a4ec',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  menuTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
+  secondaryAction: {
+    flex: 1,
+    backgroundColor: '#6c757d',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#6c757d',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  closeButton: {
-    width: 30,
-    height: 30,
+  actionIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  closeButtonText: {
-    fontSize: 24,
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  menuItems: {
-    flex: 1,
-    paddingTop: 20,
-  },
-  menuPremiumStatus: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    alignItems: 'center',
-  },
-  menuPremiumActiveText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4A90E2',
-  },
-  menuTrialActiveText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4CAF50',
-  },
-  menuUpgradeButton: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  menuUpgradeText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  menuIcon: {
-    fontSize: 24,
-    marginRight: 15,
-    width: 30,
-    textAlign: 'center',
-  },
-  menuItemText: {
-    fontSize: 16,
-    color: '#333',
-    fontWeight: '500',
-    flex: 1,
-  },
-  menuArrow: {
+  actionTitle: {
     fontSize: 18,
-    color: '#999',
+    fontWeight: '700',
+    color: '#ffffff',
+    marginBottom: 4,
+    letterSpacing: -0.3,
   },
-  menuDivider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 20,
-    marginHorizontal: 20,
-  },
-  menuFooter: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    right: 20,
-  },
-  menuFooterText: {
+  actionSubtitle: {
     fontSize: 14,
-    fontWeight: '600',
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+  },
+  
+  // Travel Features Section
+  featuresSection: {
+    paddingHorizontal: 24,
+  },
+  featuresGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'space-between',
+  },
+  featureCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    width: (screenWidth - 64) / 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    alignItems: 'center',
+  },
+  featureIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#f8f9fa',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  featureTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: -0.1,
+  },
+  featureText: {
+    fontSize: 12,
     color: '#666',
+    fontWeight: '500',
     textAlign: 'center',
+    lineHeight: 16,
   },
-  menuFooterSubtext: {
-    fontSize: 12,
-    color: '#999',
+  
+  // Bottom Navigation Styles
+  bottomNavContainer: {
+    backgroundColor: '#ffffff',
+    borderTopWidth: 1,
+    borderTopColor: '#f1f1f1',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  bottomNavSafeArea: {
+    backgroundColor: '#ffffff',
+  },
+  bottomNav: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    height: 80,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    flex: 1,
+  },
+  // Active nav item (enlarged)
+  activeNavItemContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 8,
+  },
+  activeNavBackground: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#13a4ec',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+    shadowColor: '#13a4ec',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  // Regular nav items
+  navItemContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 8,
+  },
+  navLabel: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#8E8E93',
     textAlign: 'center',
     marginTop: 4,
   },
-  menuFooterUsage: {
+  activeNavLabel: {
     fontSize: 12,
-    color: '#999',
+    color: '#13a4ec',
+    fontWeight: '600',
     textAlign: 'center',
     marginTop: 4,
+  },
+  // Legacy styles (keeping for compatibility)
+  navIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  activeNavItem: {
+    backgroundColor: '#f0f8ff',
   },
 });

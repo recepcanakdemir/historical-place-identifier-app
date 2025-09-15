@@ -6,6 +6,7 @@ import {
   View,
 } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 import { NearbyPlace } from '../types';
 
 interface NearbyPlacesProps {
@@ -52,48 +53,52 @@ export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPl
 
     const minLat = Math.min(...latitudes);
     const maxLat = Math.max(...latitudes);
-    const minLng = Math.min(...longitudes);
-    const maxLng = Math.max(...longitudes);
+    const minLon = Math.min(...longitudes);
+    const maxLon = Math.max(...longitudes);
 
     const centerLat = (minLat + maxLat) / 2;
-    const centerLng = (minLng + maxLng) / 2;
-
-    const latDelta = (maxLat - minLat) * 1.5 || 0.05;
-    const lngDelta = (maxLng - minLng) * 1.5 || 0.05;
+    const centerLon = (minLon + maxLon) / 2;
+    const deltaLat = Math.max((maxLat - minLat) * 1.3, 0.01);
+    const deltaLon = Math.max((maxLon - minLon) * 1.3, 0.01);
 
     return {
       latitude: centerLat,
-      longitude: centerLng,
-      latitudeDelta: Math.max(latDelta, 0.02),
-      longitudeDelta: Math.max(lngDelta, 0.02),
+      longitude: centerLon,
+      latitudeDelta: deltaLat,
+      longitudeDelta: deltaLon,
     };
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>🗺️ Nearby Must-See Places</Text>
-        <Text style={styles.subtitle}>
-          Discover interesting places within walking distance
-        </Text>
-        <View style={styles.toggleButtons}>
-          <TouchableOpacity
-            style={[styles.toggleButton, !showMap && styles.toggleButtonActive]}
-            onPress={() => setShowMap(false)}
-          >
-            <Text style={[styles.toggleButtonText, !showMap && styles.toggleButtonTextActive]}>
-              📋 List
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.toggleButton, showMap && styles.toggleButtonActive]}
-            onPress={() => setShowMap(true)}
-          >
-            <Text style={[styles.toggleButtonText, showMap && styles.toggleButtonTextActive]}>
-              🗺️ Map
-            </Text>
-          </TouchableOpacity>
-        </View>
+      {/* Modern Toggle */}
+      <View style={styles.modernToggle}>
+        <TouchableOpacity
+          style={[styles.toggleOption, !showMap && styles.toggleOptionActive]}
+          onPress={() => setShowMap(false)}
+        >
+          <Ionicons 
+            name="list" 
+            size={16} 
+            color={!showMap ? "#000000" : "#6B7280"} 
+          />
+          <Text style={[styles.toggleText, !showMap && styles.toggleTextActive]}>
+            List
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.toggleOption, showMap && styles.toggleOptionActive]}
+          onPress={() => setShowMap(true)}
+        >
+          <Ionicons 
+            name="map" 
+            size={16} 
+            color={showMap ? "#000000" : "#6B7280"} 
+          />
+          <Text style={[styles.toggleText, showMap && styles.toggleTextActive]}>
+            Map
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {showMap ? (
@@ -104,12 +109,12 @@ export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPl
             showsUserLocation={true}
             showsMyLocationButton={true}
             onMapReady={() => console.log('🗺️ Map loaded successfully')}
-            onError={(error) => {
+            onError={(error: any) => {
               console.warn('⚠️ Map error (non-critical):', error);
               // Don't crash the app - map errors are often non-critical
             }}
             loadingEnabled={true}
-            loadingIndicatorColor="#4A90E2"
+            loadingIndicatorColor="#000000"
             loadingBackgroundColor="rgba(255,255,255,0.8)"
           >
             {places
@@ -141,40 +146,39 @@ export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPl
           </MapView>
         </View>
       ) : (
-        <View style={styles.placesGrid}>
+        <View style={styles.placesContainer}>
           {places.map((place, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.placeCard}
+              style={styles.modernPlaceCard}
               onPress={() => onPlacePress?.(place)}
               activeOpacity={0.7}
             >
-              <View style={styles.placeHeader}>
-                <View style={styles.placeNameContainer}>
-                  <Text style={styles.placeName} numberOfLines={1}>
-                    {place.name}
-                  </Text>
-                  <Text style={styles.placeType}>
-                    {getPlaceTypeEmoji(place.placeType)} {place.placeType}
-                  </Text>
+              <View style={styles.cardContent}>
+                <View style={styles.placeInfo}>
+                  <View style={styles.iconContainer}>
+                    <Ionicons name="location" size={20} color="#000000" />
+                  </View>
+                  <View style={styles.textContent}>
+                    <Text style={styles.modernPlaceName} numberOfLines={1}>
+                      {place.name}
+                    </Text>
+                    <Text style={styles.modernPlaceType}>
+                      {place.placeType}
+                    </Text>
+                    {place.description && (
+                      <Text style={styles.modernPlaceDescription} numberOfLines={2}>
+                        {place.description}
+                      </Text>
+                    )}
+                    <Text style={styles.modernDistance}>
+                      {place.approximateDistance}
+                    </Text>
+                  </View>
                 </View>
-                <TouchableOpacity
-                  style={styles.locationButton}
-                  onPress={() => onPlacePress?.(place)}
-                >
-                  <Text style={styles.locationIcon}>📍</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <Text style={styles.placeDescription} numberOfLines={2}>
-                {place.description}
-              </Text>
-              
-              <View style={styles.distanceContainer}>
-                <Text style={styles.distanceText}>
-                  🚶‍♂️ {place.approximateDistance}
-                </Text>
-                <Text style={styles.tapHint}>Tap to open in maps</Text>
+                <View style={styles.arrowContainer}>
+                  <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                </View>
               </View>
             </TouchableOpacity>
           ))}
@@ -184,162 +188,121 @@ export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPl
   );
 }
 
-const getPlaceTypeEmoji = (placeType: string): string => {
-  const type = placeType.toLowerCase();
-  if (type.includes('museum')) return '🏛️';
-  if (type.includes('park')) return '🌳';
-  if (type.includes('historical') || type.includes('history')) return '🏛️';
-  if (type.includes('church') || type.includes('cathedral') || type.includes('mosque')) return '⛪';
-  if (type.includes('monument')) return '🗿';
-  if (type.includes('castle')) return '🏰';
-  if (type.includes('market')) return '🏪';
-  if (type.includes('viewpoint') || type.includes('scenic')) return '🌄';
-  if (type.includes('bridge')) return '🌉';
-  if (type.includes('tower')) return '🗼';
-  return '📍';
-};
-
-// Map dimensions can be calculated dynamically if needed
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 25,
-    padding: 15,
-    backgroundColor: '#f0f8ff',
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#4A90E2',
+    marginTop: 16,
   },
-  header: {
-    marginBottom: 15,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 5,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  toggleButtons: {
+  
+  // Modern Toggle Design
+  modernToggle: {
     flexDirection: 'row',
-    backgroundColor: '#e8f3ff',
-    borderRadius: 8,
-    padding: 3,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 16,
   },
-  toggleButton: {
+  toggleOption: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 6,
-    alignItems: 'center',
+    gap: 6,
   },
-  toggleButtonActive: {
-    backgroundColor: '#4A90E2',
+  toggleOptionActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  toggleButtonText: {
-    fontSize: 13,
+  toggleText: {
+    fontSize: 14,
     fontWeight: '500',
-    color: '#4A90E2',
+    color: '#6B7280',
   },
-  toggleButtonTextActive: {
-    color: 'white',
+  toggleTextActive: {
+    color: '#000000',
+    fontWeight: '600',
   },
+
+  // Map Styles
   mapContainer: {
     height: 250,
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: 'hidden',
-    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   map: {
     flex: 1,
   },
-  placesGrid: {
+
+  // List Styles
+  placesContainer: {
     gap: 12,
-    marginTop: 10,
   },
-  placeCard: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderLeftWidth: 3,
-    borderLeftColor: '#4A90E2',
-  },
-  placeHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  placeNameContainer: {
-    flex: 1,
-    marginRight: 10,
-  },
-  placeName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    lineHeight: 22,
-    marginBottom: 4,
-  },
-  placeType: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#4A90E2',
-    backgroundColor: '#e8f3ff',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+  modernPlaceCard: {
+    backgroundColor: '#ffffff',
     borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  locationButton: {
-    backgroundColor: '#4A90E2',
-    borderRadius: 20,
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  locationIcon: {
-    fontSize: 18,
-    color: 'white',
-  },
-  placeDescription: {
-    fontSize: 14,
-    color: '#555',
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  distanceContainer: {
+  cardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  distanceText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#4A90E2',
-    backgroundColor: '#f8fbff',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+  placeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
-  tapHint: {
-    fontSize: 11,
-    color: '#888',
-    fontStyle: 'italic',
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  textContent: {
+    flex: 1,
+  },
+  modernPlaceName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 2,
+  },
+  modernPlaceType: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 4,
+  },
+  modernPlaceDescription: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  modernDistance: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  arrowContainer: {
+    marginLeft: 8,
   },
 });
