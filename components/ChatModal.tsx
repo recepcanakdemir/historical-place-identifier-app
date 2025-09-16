@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { sendChatMessage, getConversationHistory, formatChatMessage, startChatSession } from '../services/chatService';
 import { PlaceInfo } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface ChatMessage {
   id: string;
@@ -33,6 +34,7 @@ interface ChatModalProps {
 }
 
 export function ChatModal({ visible, landmarkInfo, onClose }: ChatModalProps) {
+  const { texts: t } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +59,7 @@ export function ChatModal({ visible, landmarkInfo, onClose }: ChatModalProps) {
       if (history.length === 0) {
         const welcomeMessage: ChatMessage = {
           id: 'welcome_' + Date.now(),
-          content: `Hello! I'm your personal guide for ${landmarkInfo.name}. Ask me anything about its history, architecture, significance, or interesting facts!`,
+          content: t.chatWelcome.replace('{name}', landmarkInfo.name),
           isUser: false,
           timestamp: new Date().toISOString(),
           formattedTime: new Date().toLocaleTimeString([], { 
@@ -106,7 +108,7 @@ export function ChatModal({ visible, landmarkInfo, onClose }: ChatModalProps) {
         // Show error message
         const errorMessage: ChatMessage = {
           id: 'error_' + Date.now(),
-          content: response.message || 'Sorry, I encountered an error. Please try again.',
+          content: response.message || t.chatErrorMessage,
           isUser: false,
           timestamp: new Date().toISOString(),
           formattedTime: new Date().toLocaleTimeString([], { 
@@ -118,7 +120,7 @@ export function ChatModal({ visible, landmarkInfo, onClose }: ChatModalProps) {
       }
     } catch (error) {
       console.error('Chat error:', error);
-      Alert.alert('Chat Error', 'Unable to send message. Please try again.');
+      Alert.alert(t.chatError, t.chatErrorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -185,7 +187,7 @@ export function ChatModal({ visible, landmarkInfo, onClose }: ChatModalProps) {
           <View style={styles.header}>
             <View style={styles.headerContent}>
               <View style={styles.headerText}>
-                <Text style={styles.headerTitle}>Chat about</Text>
+                <Text style={styles.headerTitle}>{t.chatAbout}</Text>
                 <Text style={styles.headerSubtitle} numberOfLines={1}>
                   {landmarkInfo.name}
                 </Text>
@@ -210,7 +212,7 @@ export function ChatModal({ visible, landmarkInfo, onClose }: ChatModalProps) {
             {isLoading && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color="#4A90E2" />
-                <Text style={styles.loadingText}>AI is thinking...</Text>
+                <Text style={styles.loadingText}>{t.aiThinking}</Text>
               </View>
             )}
           </ScrollView>
@@ -223,7 +225,7 @@ export function ChatModal({ visible, landmarkInfo, onClose }: ChatModalProps) {
                 style={styles.textInput}
                 value={inputText}
                 onChangeText={setInputText}
-                placeholder="Ask about history, architecture, or fun facts..."
+                placeholder={t.chatInputPlaceholder}
                 placeholderTextColor="#999"
                 multiline
                 maxLength={500}

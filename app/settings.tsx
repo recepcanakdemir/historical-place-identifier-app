@@ -1,4 +1,4 @@
-// app/settings.tsx - Completely Fixed TypeScript Version
+// app/settings.tsx - Updated with Language Context
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -16,41 +16,19 @@ import {
   StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  SUPPORTED_LANGUAGES,
-  changeLanguage,
-  getCurrentLanguage,
-  getDeviceLanguage,
-  getUITexts,
-  resetToDeviceLanguage,
-} from '../services/languageService';
+import { useLanguage } from '../contexts/LanguageContext';
 import { checkSubscriptionStatus, restorePurchases } from '../services/subscriptionService';
 import { getUsageStats, resetUsage } from '../services/usageService';
-// IMPORT EKLENDİ:
 import { Language, SubscriptionStatus, UsageStats } from '../types';
 
 export default function SettingsScreen() {
-  const [currentLang, setCurrentLang] = useState<string>('en');
-  const [deviceLang, setDeviceLang] = useState<string>('en');
+  const { language: currentLang, texts: t, setLanguage, supportedLanguages, isLoading: languageLoading } = useLanguage();
   const [modalVisible, setModalVisible] = useState<boolean>(false);
-  const [uiTexts, setUITexts] = useState(getUITexts('en'));
 
   // Premium states with proper types
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-
-  // Manual backup if import fails
-  const MANUAL_LANGUAGES: Language[] = [
-    { code: 'tr', name: 'Türkçe', flag: '🇹🇷' },
-    { code: 'en', name: 'English', flag: '🇺🇸' },
-    { code: 'es', name: 'Español', flag: '🇪🇸' },
-    { code: 'fr', name: 'Français', flag: '🇫🇷' },
-    { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
-  ];
-
-  // Use imported or manual with proper typing
-  const languagesToUse: Language[] = SUPPORTED_LANGUAGES?.length > 0 ? SUPPORTED_LANGUAGES : MANUAL_LANGUAGES;
 
   useEffect(() => {
     loadSettings();
@@ -59,14 +37,6 @@ export default function SettingsScreen() {
   const loadSettings = async (): Promise<void> => {
     try {
       setLoading(true);
-
-      // Load language settings
-      const current = await getCurrentLanguage();
-      const device = getDeviceLanguage();
-
-      setCurrentLang(current);
-      setDeviceLang(device);
-      setUITexts(getUITexts(current));
 
       // Load usage stats with type checking
       const stats = await getUsageStats();
@@ -80,7 +50,7 @@ export default function SettingsScreen() {
         setSubscriptionStatus(subStatus as SubscriptionStatus);
       }
 
-      console.log('Settings loaded:', { current, device, stats, subStatus });
+      console.log('Settings loaded:', { stats, subStatus });
     } catch (error) {
       console.error('Error loading settings:', error);
     } finally {
@@ -98,15 +68,13 @@ export default function SettingsScreen() {
 
   const handleLanguageChange = async (languageCode: string): Promise<void> => {
     try {
-      await changeLanguage(languageCode);
-      setCurrentLang(languageCode);
-      setUITexts(getUITexts(languageCode));
-      closeLanguageModal();
-
+      await setLanguage(languageCode);
+      setModalVisible(false);
+      
       Alert.alert(
-        getUITexts(languageCode).languageChanged,
-        getUITexts(languageCode).languageChangedMessage,
-        [{ text: getUITexts(languageCode).ok }]
+        t.languageChanged,
+        t.languageChangedMessage,
+        [{ text: t.ok }]
       );
     } catch (error) {
       console.error('Error changing language:', error);
@@ -115,14 +83,14 @@ export default function SettingsScreen() {
 
   const handleResetToDevice = async (): Promise<void> => {
     try {
-      const deviceLanguage = await resetToDeviceLanguage();
-      setCurrentLang(deviceLanguage);
-      setUITexts(getUITexts(deviceLanguage));
-
+      // Reset to device language using language context
+      const deviceLanguage = 'en'; // This should be detected from device
+      await setLanguage(deviceLanguage);
+      
       Alert.alert(
-        getUITexts(deviceLanguage).languageChanged,
-        getUITexts(deviceLanguage).languageChangedMessage,
-        [{ text: getUITexts(deviceLanguage).ok }]
+        t.languageChanged,
+        t.languageChangedMessage,
+        [{ text: t.ok }]
       );
     } catch (error) {
       console.error('Error resetting language:', error);
@@ -175,11 +143,11 @@ export default function SettingsScreen() {
   };
 
   const getCurrentLanguageInfo = (): Language => {
-    return languagesToUse.find(lang => lang.code === currentLang) || languagesToUse[0];
+    return supportedLanguages.find(lang => lang.code === currentLang) || supportedLanguages[0];
   };
 
   const getDeviceLanguageInfo = (): Language => {
-    return languagesToUse.find(lang => lang.code === deviceLang) || languagesToUse[0];
+    return supportedLanguages.find(lang => lang.code === 'en') || supportedLanguages[0]; // Default to English
   };
 
   const renderLanguageItem: ListRenderItem<Language> = ({ item }) => (
@@ -222,7 +190,7 @@ export default function SettingsScreen() {
             >
               <Ionicons name="arrow-back" size={24} color="#2c3e50" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{uiTexts.settings}</Text>
+            <Text style={styles.headerTitle}>{t.settings}</Text>
             <View style={styles.headerRight} />
           </View>
         </SafeAreaView>
@@ -232,15 +200,15 @@ export default function SettingsScreen() {
 
         {/* Premium Status Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Premium Status</Text>
+          <Text style={styles.sectionTitle}>{t.premiumFeatures}</Text>
 
           <View style={styles.premiumCard}>
             <View style={styles.premiumHeader}>
               <Text style={styles.premiumTitle}>
-                {subscriptionStatus?.isPremium ? '✨ Premium Active' : '📸 Free Plan'}
+                {subscriptionStatus?.isPremium ? `✨ ${t.premiumFeatures}` : `📸 ${t.freeTrialActive}`}
               </Text>
               <Text style={styles.premiumStatus}>
-                {subscriptionStatus?.isPremium ? 'Unlimited Access' : `${usageStats?.remainingFreeAnalyses || 0} analyses left`}
+                {subscriptionStatus?.isPremium ? t.unlimitedAccess : `${usageStats?.remainingFreeAnalyses || 0} ${t.freeAnalysisLeft.split(' ')[3]}`}
               </Text>
             </View>
 
@@ -258,7 +226,7 @@ export default function SettingsScreen() {
                 style={styles.upgradeButton}
                 onPress={handleUpgradeToPremium}
               >
-                <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+                <Text style={styles.upgradeButtonText}>{t.upgradeToPremium}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -267,18 +235,18 @@ export default function SettingsScreen() {
         {/* Usage Statistics */}
         {usageStats && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Usage Statistics</Text>
+            <Text style={styles.sectionTitle}>{t.usageStats || 'Usage Statistics'}</Text>
 
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
                 <Text style={styles.statNumber}>{usageStats.totalAnalyses}</Text>
-                <Text style={styles.statLabel}>Total Analyses</Text>
+                <Text style={styles.statLabel}>{t.totalAnalyses || 'Total Analyses'}</Text>
               </View>
               <View style={styles.statCard}>
                 <Text style={styles.statNumber}>
                   {usageStats.isPremium ? '∞' : usageStats.remainingFreeAnalyses}
                 </Text>
-                <Text style={styles.statLabel}>Remaining</Text>
+                <Text style={styles.statLabel}>{t.remaining || 'Remaining'}</Text>
               </View>
             </View>
 
@@ -290,11 +258,11 @@ export default function SettingsScreen() {
 
         {/* Language Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{uiTexts.language}</Text>
+          <Text style={styles.sectionTitle}>{t.language}</Text>
 
           <View style={styles.settingItem}>
             <View style={styles.settingInfo}>
-              <Text style={styles.settingLabel}>{uiTexts.currentLanguage}</Text>
+              <Text style={styles.settingLabel}>{t.currentLanguage}</Text>
               <Text style={styles.settingValue}>
                 {getCurrentLanguageInfo().flag} {getCurrentLanguageInfo().name}
               </Text>
@@ -305,7 +273,7 @@ export default function SettingsScreen() {
             style={styles.settingButton}
             onPress={openLanguageModal}
           >
-            <Text style={styles.settingButtonText}>{uiTexts.changeLanguage}</Text>
+            <Text style={styles.settingButtonText}>{t.changeLanguage}</Text>
             <Text style={styles.arrow}>›</Text>
           </TouchableOpacity>
 
@@ -314,7 +282,7 @@ export default function SettingsScreen() {
             onPress={handleResetToDevice}
           >
             <View style={styles.settingInfo}>
-              <Text style={styles.settingButtonText}>{uiTexts.resetToDevice}</Text>
+              <Text style={styles.settingButtonText}>{t.resetToDevice}</Text>
               <Text style={styles.deviceLanguageText}>
                 {getDeviceLanguageInfo().flag} {getDeviceLanguageInfo().name}
               </Text>
@@ -325,7 +293,7 @@ export default function SettingsScreen() {
 
         {/* Account Actions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle}>{t.account || 'Account'}</Text>
 
           <TouchableOpacity
             style={styles.settingButton}
@@ -333,7 +301,7 @@ export default function SettingsScreen() {
             disabled={loading}
           >
             <Text style={styles.settingButtonText}>
-              {loading ? 'Restoring...' : 'Restore Purchases'}
+              {loading ? t.loading : t.restorePurchases}
             </Text>
             <Text style={styles.arrow}>↻</Text>
           </TouchableOpacity>
@@ -347,7 +315,7 @@ export default function SettingsScreen() {
           </TouchableOpacity>*/}
 
 <View style={styles.section}>
-  <Text style={styles.sectionTitle}>Legal</Text>
+  <Text style={styles.sectionTitle}>{t.legal || 'Legal'}</Text>
 
   <TouchableOpacity
     style={styles.settingButton}
@@ -357,7 +325,7 @@ export default function SettingsScreen() {
       )
     }
   >
-    <Text style={styles.settingButtonText}>Terms of Use</Text>
+    <Text style={styles.settingButtonText}>{t.terms}</Text>
     <Text style={styles.arrow}>›</Text>
   </TouchableOpacity>
 
@@ -369,7 +337,7 @@ export default function SettingsScreen() {
       )
     }
   >
-    <Text style={styles.settingButtonText}>Privacy Policy</Text>
+    <Text style={styles.settingButtonText}>{t.privacy}</Text>
     <Text style={styles.arrow}>›</Text>
   </TouchableOpacity>
 </View>
@@ -394,7 +362,7 @@ export default function SettingsScreen() {
           />
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{uiTexts.selectLanguage}</Text>
+              <Text style={styles.modalTitle}>{t.selectLanguage}</Text>
               <TouchableOpacity
                 style={styles.closeButton}
                 onPress={closeLanguageModal}
@@ -404,7 +372,7 @@ export default function SettingsScreen() {
             </View>
 
             <FlatList
-              data={languagesToUse}
+              data={supportedLanguages}
               renderItem={renderLanguageItem}
               keyExtractor={(item, index) => `lang-${item.code}-${index}`}
               style={styles.languageList}

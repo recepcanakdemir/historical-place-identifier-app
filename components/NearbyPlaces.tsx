@@ -18,24 +18,24 @@ interface NearbyPlacesProps {
 }
 
 // Component for place image with loading and fallback states
-function PlaceImage({ place }: { place: NearbyPlace }) {
+function PlaceImage({ place, isGrid = false }: { place: NearbyPlace, isGrid?: boolean }) {
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
 
   if (!place.photoUrl || imageError) {
     // Fallback placeholder
     return (
-      <View style={styles.imagePlaceholder}>
-        <Ionicons name="image-outline" size={24} color="#9CA3AF" />
+      <View style={isGrid ? styles.gridImagePlaceholder : styles.imagePlaceholder}>
+        <Ionicons name="image-outline" size={isGrid ? 32 : 24} color="#9CA3AF" />
       </View>
     );
   }
 
   return (
-    <View style={styles.imageContainer}>
+    <View style={isGrid ? styles.gridImageContainer : styles.imageContainer}>
       <Image
         source={{ uri: place.photoUrl }}
-        style={styles.placeImage}
+        style={isGrid ? styles.gridPlaceImage : styles.placeImage}
         onLoad={() => setImageLoading(false)}
         onError={() => {
           setImageError(true);
@@ -44,7 +44,7 @@ function PlaceImage({ place }: { place: NearbyPlace }) {
         resizeMode="cover"
       />
       {imageLoading && (
-        <View style={styles.imageLoader}>
+        <View style={isGrid ? styles.gridImageLoader : styles.imageLoader}>
           <ActivityIndicator size="small" color="#13a4ec" />
         </View>
       )}
@@ -54,6 +54,24 @@ function PlaceImage({ place }: { place: NearbyPlace }) {
 
 export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPlacesProps) {
   const [showMap, setShowMap] = useState(false);
+  
+  // Category colors for different place types
+  const getCategoryColor = (placeType: string) => {
+    const type = placeType.toLowerCase();
+    if (type.includes('museum')) {
+      return { backgroundColor: '#FEF3C7', textColor: '#92400E' }; // Yellow for museums
+    } else if (type.includes('mosque') || type.includes('church') || type.includes('temple')) {
+      return { backgroundColor: '#DBEAFE', textColor: '#1E40AF' }; // Blue for religious sites
+    } else if (type.includes('palace') || type.includes('castle')) {
+      return { backgroundColor: '#FCE7F3', textColor: '#BE185D' }; // Pink for palaces/castles
+    } else if (type.includes('park') || type.includes('garden')) {
+      return { backgroundColor: '#D1FAE5', textColor: '#047857' }; // Green for parks
+    } else if (type.includes('market') || type.includes('bazaar')) {
+      return { backgroundColor: '#FED7AA', textColor: '#C2410C' }; // Orange for markets
+    } else {
+      return { backgroundColor: '#E5E7EB', textColor: '#374151' }; // Gray for others
+    }
+  };
 
   if (!places || places.length === 0) {
     return null;
@@ -183,50 +201,65 @@ export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPl
           </MapView>
         </View>
       ) : (
-        <View style={styles.placesContainer}>
-          {places.map((place, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.modernPlaceCard}
-              onPress={() => onPlacePress?.(place)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.cardContent}>
-                {/* Place Image */}
-                <PlaceImage place={place} />
+        <View style={styles.placesGrid}>
+          {places.map((place, index) => {
+            const categoryColors = getCategoryColor(place.placeType);
+            return (
+              <TouchableOpacity
+                key={index}
+                style={styles.gridPlaceCard}
+                onPress={() => onPlacePress?.(place)}
+                activeOpacity={0.7}
+              >
+                {/* Large Place Image */}
+                <PlaceImage place={place} isGrid={true} />
                 
-                <View style={styles.placeInfo}>
-                  <View style={styles.textContent}>
-                    <Text style={styles.modernPlaceName} numberOfLines={1}>
-                      {place.name}
-                    </Text>
-                    <Text style={styles.modernPlaceType}>
-                      {place.placeType}
-                    </Text>
-                    {place.description && (
-                      <Text style={styles.modernPlaceDescription} numberOfLines={2}>
-                        {place.description}
+                {/* Content */}
+                <View style={styles.gridContent}>
+                  <Text style={styles.gridPlaceName} numberOfLines={1}>
+                    {place.name}
+                  </Text>
+                  
+                  {/* Category and Distance Row */}
+                  <View style={styles.gridInfoRow}>
+                    <View style={[
+                      styles.categoryTag, 
+                      { backgroundColor: categoryColors.backgroundColor }
+                    ]}>
+                      <Text style={[
+                        styles.categoryText,
+                        { color: categoryColors.textColor }
+                      ]} numberOfLines={1}>
+                        {place.placeType}
                       </Text>
-                    )}
-                    <View style={styles.bottomRow}>
-                      <Text style={styles.modernDistance}>
+                    </View>
+                    
+                    <View style={styles.distanceContainer}>
+                      <Ionicons name="location" size={12} color="#6B7280" />
+                      <Text style={styles.gridDistance}>
                         {place.approximateDistance}
                       </Text>
-                      {place.rating && (
-                        <View style={styles.ratingContainer}>
-                          <Ionicons name="star" size={12} color="#FFC107" />
-                          <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
-                        </View>
-                      )}
                     </View>
                   </View>
+                  
+                  {/* Description */}
+                  {place.description && (
+                    <Text style={styles.gridDescription} numberOfLines={2}>
+                      {place.description}
+                    </Text>
+                  )}
+                  
+                  {/* Rating */}
+                  {place.rating && (
+                    <View style={styles.gridRatingContainer}>
+                      <Ionicons name="star" size={14} color="#FFC107" />
+                      <Text style={styles.gridRatingText}>{place.rating.toFixed(1)}</Text>
+                    </View>
+                  )}
                 </View>
-                <View style={styles.arrowContainer}>
-                  <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
     </View>
@@ -290,6 +323,112 @@ const styles = StyleSheet.create({
   // List Styles
   placesContainer: {
     gap: 12,
+  },
+  
+  // Grid Styles
+  placesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    justifyContent: 'space-between',
+  },
+  gridPlaceCard: {
+    width: '48%', // Two cards per row with gap
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  gridImageContainer: {
+    width: '100%',
+    height: 120,
+    position: 'relative',
+  },
+  gridPlaceImage: {
+    width: '100%',
+    height: 120,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  gridImagePlaceholder: {
+    width: '100%',
+    height: 120,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  gridImageLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+  },
+  gridContent: {
+    padding: 12,
+  },
+  gridPlaceName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  gridInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  categoryTag: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    maxWidth: '60%',
+  },
+  categoryText: {
+    fontSize: 11,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  distanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  gridDistance: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  gridDescription: {
+    fontSize: 13,
+    color: '#6B7280',
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+  gridRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+  },
+  gridRatingText: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '600',
   },
   modernPlaceCard: {
     backgroundColor: '#ffffff',

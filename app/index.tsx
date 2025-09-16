@@ -1,4 +1,4 @@
-// app/index.tsx - Modern UI Design
+// app/index.tsx - Modern UI Design with Language Context
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
@@ -17,8 +17,8 @@ import {
   StatusBar
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../contexts/LanguageContext';
 import { checkAppAccess, getAccessStatus } from '../services/accessService';
-import { getCurrentLanguage, getUITexts } from '../services/languageService';
 import { checkSubscriptionStatus } from '../services/subscriptionService';
 import { getUsageStats } from '../services/usageService';
 import { SubscriptionStatus, UsageStats } from '../types';
@@ -26,7 +26,7 @@ import { SubscriptionStatus, UsageStats } from '../types';
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
-  const [uiTexts, setUITexts] = useState(getUITexts('en'));
+  const { texts: t, isLoading: languageLoading } = useLanguage();
   const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
   const [trialInfo, setTrialInfo] = useState<any>(null);
@@ -164,10 +164,6 @@ export default function HomeScreen() {
 
   const loadAppData = async (): Promise<void> => {
     try {
-      // Load language
-      const language = await getCurrentLanguage();
-      setUITexts(getUITexts(language));
-      
       // Load usage stats
       const stats = await getUsageStats();
       setUsageStats(stats);
@@ -180,7 +176,7 @@ export default function HomeScreen() {
       const trial = await checkTrialStatus();
       setTrialInfo(trial);
       
-      console.log('🏠 Home screen data loaded:', { language, stats, subStatus, trial });
+      console.log('🏠 Home screen data loaded:', { stats, subStatus, trial });
     } catch (error) {
       console.error('Error loading app data:', error);
     }
@@ -188,11 +184,11 @@ export default function HomeScreen() {
   const requestLocationAndOpenCamera = (): Promise<void> => {
     return new Promise((resolve) => {
       Alert.alert(
-        'Location for Better Analysis',
-        'Allow location access for more accurate historical place identification?\n\nThis helps our AI provide better context about landmarks near you.',
+        t.locationForBetter,
+        t.locationPermissionMessage,
         [
           { 
-            text: 'Skip', 
+            text: t.skip, 
             style: 'cancel',
             onPress: () => {
               console.log('📍 User skipped location permission');
@@ -201,7 +197,7 @@ export default function HomeScreen() {
             }
           },
           { 
-            text: 'Allow', 
+            text: t.allow, 
             onPress: () => {
               console.log('📍 User allowed location permission');
               router.push('/camera?locationEnabled=true');
@@ -250,7 +246,7 @@ export default function HomeScreen() {
       return (
         <View style={styles.usageIndicator}>
           <Text style={styles.usageText}>
-            ∞ {planType === 'lifetime' ? 'Lifetime Access' : 'Unlimited Access'}
+            ∞ {planType === 'lifetime' ? t.lifetimePlan : t.unlimitedAccess}
           </Text>
         </View>
       );
@@ -260,10 +256,10 @@ export default function HomeScreen() {
     if (trialInfo?.isActive) {
       return (
         <View style={styles.usageIndicator}>
-          <Text style={styles.usageText}>🎁 Free Trial Active</Text>
+          <Text style={styles.usageText}>🎁 {t.freeTrialActive}</Text>
           <View style={styles.trialProgress}>
             <Text style={styles.trialProgressText}>
-              {trialInfo.daysRemaining} day{trialInfo.daysRemaining !== 1 ? 's' : ''} remaining
+              {t.daysRemaining.replace('{count}', trialInfo.daysRemaining).replace('{s}', trialInfo.daysRemaining !== 1 ? 's' : '')}
             </Text>
           </View>
         </View>
@@ -276,7 +272,7 @@ export default function HomeScreen() {
 
     return (
       <View style={styles.usageIndicator}>
-        <Text style={styles.usageText}>{remaining} of {total} free analysis left</Text>
+        <Text style={styles.usageText}>{t.freeAnalysisLeft.replace('{remaining}', remaining.toString()).replace('{total}', total.toString())}</Text>
         <View style={styles.progressBar}>
           {[...Array(total)].map((_, index) => (
             <View
@@ -308,7 +304,7 @@ export default function HomeScreen() {
       >
         <SafeAreaView>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>{uiTexts.appName || 'LandmarkAI'}</Text>
+            <Text style={styles.headerTitle}>{t.appName}</Text>
             
             {/* Right side - Premium status or Pro button */}
             <View style={styles.headerRight}>
@@ -358,9 +354,9 @@ export default function HomeScreen() {
             />
           </Animated.View>
 
-          <Text style={styles.title}>{uiTexts.discoverHistory || 'Discover History'}</Text>
+          <Text style={styles.title}>{t.discoverHistory}</Text>
           <Text style={styles.subtitle}>
-            {uiTexts.subtitle || 'Your AI-powered travel companion for exploring historical landmarks'}
+            {t.subtitle}
           </Text>
         </Animated.View>
 
@@ -379,23 +375,23 @@ export default function HomeScreen() {
             }
           ]}
         >
-          <Text style={styles.sectionTitle}>Start Your Journey</Text>
+          <Text style={styles.sectionTitle}>{t.startYourJourney}</Text>
           
           <View style={styles.actionButtons}>
             <TouchableOpacity style={styles.primaryAction} onPress={takePhoto}>
               <View style={styles.actionIconContainer}>
                 <Ionicons name="camera" size={32} color="#ffffff" />
               </View>
-              <Text style={styles.actionTitle}>Capture</Text>
-              <Text style={styles.actionSubtitle}>Take a photo</Text>
+              <Text style={styles.actionTitle}>{t.capture}</Text>
+              <Text style={styles.actionSubtitle}>{t.takePhoto}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.secondaryAction} onPress={pickImage}>
               <View style={styles.secondaryActionIconContainer}>
                 <Ionicons name="images" size={32} color="#2c3e50" />
               </View>
-              <Text style={styles.secondaryActionTitle}>Explore</Text>
-              <Text style={styles.secondaryActionSubtitle}>Choose photo</Text>
+              <Text style={styles.secondaryActionTitle}>{t.explore}</Text>
+              <Text style={styles.secondaryActionSubtitle}>{t.choosePhoto}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -407,38 +403,38 @@ export default function HomeScreen() {
             { opacity: featuresOpacity }
           ]}
         >
-          <Text style={styles.sectionTitle}>Why Travelers Love Us</Text>
+          <Text style={styles.sectionTitle}>{t.whyTravelersLoveUs}</Text>
           <View style={styles.featuresGrid}>
             <View style={styles.featureCard}>
               <View style={styles.featureIconContainer}>
                 <Ionicons name="language" size={24} color="#000000" />
               </View>
-              <Text style={styles.featureTitle}>Multi-Language</Text>
-              <Text style={styles.featureText}>{uiTexts.languagesSupported || '10+ languages supported'}</Text>
+              <Text style={styles.featureTitle}>{t.multiLanguage}</Text>
+              <Text style={styles.featureText}>{t.languagesSupported}</Text>
             </View>
             
             <View style={styles.featureCard}>
               <View style={styles.featureIconContainer}>
                 <Ionicons name="location" size={24} color="#28a745" />
               </View>
-              <Text style={styles.featureTitle}>Location Smart</Text>
-              <Text style={styles.featureText}>{uiTexts.locationAware || 'Context-aware discoveries'}</Text>
+              <Text style={styles.featureTitle}>{t.locationSmart}</Text>
+              <Text style={styles.featureText}>{t.locationAware}</Text>
             </View>
             
             <View style={styles.featureCard}>
               <View style={styles.featureIconContainer}>
                 <Ionicons name="bookmark" size={24} color="#ffc107" />
               </View>
-              <Text style={styles.featureTitle}>Save & Share</Text>
-              <Text style={styles.featureText}>{uiTexts.saveDiscoveries || 'Build your travel journal'}</Text>
+              <Text style={styles.featureTitle}>{t.saveAndShare}</Text>
+              <Text style={styles.featureText}>{t.saveDiscoveries}</Text>
             </View>
             
             <View style={styles.featureCard}>
               <View style={styles.featureIconContainer}>
                 <Ionicons name="sparkles" size={24} color="#dc3545" />
               </View>
-              <Text style={styles.featureTitle}>AI Guide</Text>
-              <Text style={styles.featureText}>Instant historical insights</Text>
+              <Text style={styles.featureTitle}>{t.aiGuide}</Text>
+              <Text style={styles.featureText}>{t.instantInsights}</Text>
             </View>
           </View>
         </Animated.View>
@@ -453,7 +449,7 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.navItem} onPress={() => router.push('/saved')} activeOpacity={0.7}>
               <View style={styles.navItemContainer}>
                 <Ionicons name="bookmark-outline" size={24} color="#8E8E93" />
-                <Text style={styles.navLabel}>Saved</Text>
+                <Text style={styles.navLabel}>{t.saved}</Text>
               </View>
             </TouchableOpacity>
 
@@ -463,7 +459,7 @@ export default function HomeScreen() {
                 <View style={styles.activeNavBackground}>
                   <Ionicons name="home" size={28} color="#ffffff" />
                 </View>
-                <Text style={styles.activeNavLabel}>Home</Text>
+                <Text style={styles.activeNavLabel}>{t.home}</Text>
               </View>
             </TouchableOpacity>
 
@@ -471,7 +467,7 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.navItem} onPress={() => router.push('/settings')} activeOpacity={0.7}>
               <View style={styles.navItemContainer}>
                 <Ionicons name="settings-outline" size={24} color="#8E8E93" />
-                <Text style={styles.navLabel}>Settings</Text>
+                <Text style={styles.navLabel}>{t.settings}</Text>
               </View>
             </TouchableOpacity>
 

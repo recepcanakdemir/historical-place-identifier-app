@@ -26,6 +26,7 @@ import { NearbyPlaces } from '../components/NearbyPlaces';
 import { ChatModal } from '../components/ChatModal';
 import { openInMaps } from '../utils/mapUtils';
 import { isChatServiceAvailable } from '../services/chatService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 import React, { useEffect, useState, useRef } from 'react';
 
@@ -49,6 +50,7 @@ export default function ResultScreen() {
   });
   
   const { imageUri, locationData, savedData, fromSaved, fromGallery } = params;
+  const { texts: t } = useLanguage();
   
   const [loading, setLoading] = useState(true);
   const [placeInfo, setPlaceInfo] = useState<PlaceInfo | null>(null);
@@ -301,7 +303,7 @@ export default function ResultScreen() {
         });
       }
     } catch (err) {
-      setError('Failed to analyze the image. Please try again.');
+      setError(t.failedToAnalyze);
       console.error(err);
     } finally {
       setLoading(false);
@@ -335,16 +337,16 @@ export default function ResultScreen() {
       setIsSaved(true);
       
       Alert.alert(
-        'Saved!',
-        'This landmark has been saved to your collection.',
-        [{ text: 'OK' }]
+        t.savedSuccess,
+        t.savedMessage,
+        [{ text: t.ok }]
       );
     } catch (error) {
       console.error('Error saving:', error);
       Alert.alert(
-        'Error',
-        'Failed to save this place. Please try again.',
-        [{ text: 'OK' }]
+        t.error,
+        t.failedToSave,
+        [{ text: t.ok }]
       );
     } finally {
       setSaving(false);
@@ -404,16 +406,16 @@ export default function ResultScreen() {
       <View style={styles.modalOverlay}>
         <View style={styles.limitModalContent}>
           <Text style={styles.limitModalIcon}>📸</Text>
-          <Text style={styles.limitModalTitle}>Analysis Limit Reached</Text>
+          <Text style={styles.limitModalTitle}>{t.analysisLimitReachedModal}</Text>
           <Text style={styles.limitModalSubtitle}>
-            You&apos;ve used your {usageStats?.totalAnalyses || 1} free analysis!
+            {t.usedFreeAnalysisModal.replace('{count}', String(usageStats?.totalAnalyses || 1))}
           </Text>
           
           <View style={styles.limitModalFeatures}>
-            <Text style={styles.featureTitle}>Upgrade to Premium for:</Text>
-            <Text style={styles.featureItem}>✨ Unlimited analyses</Text>
-            <Text style={styles.featureItem}>🚀 Priority AI processing</Text>
-            <Text style={styles.featureItem}>💾 Advanced saving features</Text>
+            <Text style={styles.featureTitle}>{t.upgradeForPremium}</Text>
+            <Text style={styles.featureItem}>{t.unlimitedAnalysisFeature}</Text>
+            <Text style={styles.featureItem}>{t.priorityAIFeature}</Text>
+            <Text style={styles.featureItem}>{t.advancedSavingFeature}</Text>
           </View>
           
           <View style={styles.limitModalButtons}>
@@ -421,14 +423,14 @@ export default function ResultScreen() {
               style={styles.upgradeButton}
               onPress={handleUpgradeToPremium}
             >
-              <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
+              <Text style={styles.upgradeButtonText}>{t.upgradeToPremium}</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
               style={styles.modalBackButton}
               onPress={handleTryAgain}
             >
-              <Text style={styles.backButtonText}>Go Back</Text>
+              <Text style={styles.backButtonText}>{t.goBack}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -439,7 +441,7 @@ export default function ResultScreen() {
   if (!imageUri) {
     return (
       <View style={styles.container}>
-        <Text>No image provided</Text>
+        <Text>{t.noImageProvided}</Text>
       </View>
     );
   }
@@ -458,7 +460,7 @@ export default function ResultScreen() {
             >
               <Ionicons name="arrow-back" size={24} color="#2c3e50" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Analysis Result</Text>
+            <Text style={styles.headerTitle}>{t.analysisResult}</Text>
             <View style={styles.headerRight}>
               {placeInfo && !loading && (
                 <View style={styles.headerActions}>
@@ -520,10 +522,10 @@ export default function ResultScreen() {
               
               <View style={styles.loadingTextContainer}>
                 <Text style={styles.loadingTitle}>
-                  {fromSaved === 'true' ? 'Loading saved data...' : 'Analyzing landmark...'}
+                  {fromSaved === 'true' ? t.loadingSaved : t.analyzing}
                 </Text>
                 <Text style={styles.loadingSubtitle}>
-                  {fromSaved === 'true' ? 'Retrieving your saved information' : 'AI is identifying historical details'}
+                  {fromSaved === 'true' ? t.retrievingInfo : t.aiIdentifying}
                 </Text>
               </View>
               
@@ -555,7 +557,7 @@ export default function ResultScreen() {
           <View style={styles.errorContainer}>
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity style={styles.retryButton} onPress={handleTryAgain}>
-              <Text style={styles.retryButtonText}>Try Again</Text>
+              <Text style={styles.retryButtonText}>{t.tryAgain}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -570,14 +572,14 @@ export default function ResultScreen() {
             
             {/* Details Cards Grid */}
             <View style={styles.detailsSection}>
-              <Text style={styles.sectionTitle}>Key Information</Text>
+              <Text style={styles.sectionTitle}>{t.keyInformation}</Text>
               {placeInfo.location && (
                 <View style={styles.modernDetailCard}>
                   <View style={styles.detailHeader}>
                     <View style={styles.detailIconContainer}>
                       <Ionicons name="location" size={16} color="#000000" />
                     </View>
-                    <Text style={styles.modernDetailLabel}>Location</Text>
+                    <Text style={styles.modernDetailLabel}>{t.location}</Text>
                   </View>
                   <Text style={styles.modernDetailValue}>{placeInfo.location}</Text>
                 </View>
@@ -589,7 +591,7 @@ export default function ResultScreen() {
                     <View style={styles.detailIconContainer}>
                       <Ionicons name="calendar-outline" size={16} color="#000000" />
                     </View>
-                    <Text style={styles.modernDetailLabel}>Built</Text>
+                    <Text style={styles.modernDetailLabel}>{t.built}</Text>
                   </View>
                   <Text style={styles.modernDetailValue}>{placeInfo.yearBuilt}</Text>
                 </View>
@@ -601,7 +603,7 @@ export default function ResultScreen() {
                     <View style={styles.detailIconContainer}>
                       <Ionicons name="business-outline" size={16} color="#000000" />
                     </View>
-                    <Text style={styles.modernDetailLabel}>Architecture</Text>
+                    <Text style={styles.modernDetailLabel}>{t.architecture}</Text>
                   </View>
                   <Text style={styles.modernDetailValue}>{placeInfo.architecture}</Text>
                 </View>
@@ -615,7 +617,7 @@ export default function ResultScreen() {
                   <View style={styles.sectionIconContainer}>
                     <Ionicons name="star" size={12} color="#000000" />
                   </View>
-                  <Text style={styles.sectionTitle}>Historical Significance</Text>
+                  <Text style={styles.sectionTitle}>{t.historicalSignificance}</Text>
                 </View>
                 <View style={styles.significanceCard}>
                   <Text style={styles.significanceText}>{placeInfo.significance}</Text>
@@ -630,7 +632,7 @@ export default function ResultScreen() {
                   <View style={styles.funFactsIconContainer}>
                     <Ionicons name="bulb" size={12} color="#10B981" />
                   </View>
-                  <Text style={styles.sectionTitle}>Fun Facts</Text>
+                  <Text style={styles.sectionTitle}>{t.funFacts}</Text>
                 </View>
                 <View style={styles.modernFunFactsCard}>
                   {placeInfo.funFacts.map((fact, index) => (
@@ -653,11 +655,11 @@ export default function ResultScreen() {
                     <Ionicons name="map" size={20} color="#3B82F6" />
                   </View>
                   <View style={styles.nearbyHeaderContent}>
-                    <Text style={styles.sectionTitle}>Nearby Must-See Places</Text>
+                    <Text style={styles.sectionTitle}>{t.nearbyMustSee}</Text>
                     {nearbyPlacesEnriching && (
                       <View style={styles.enrichmentStatus}>
                         <ActivityIndicator size="small" color="#4A90E2" />
-                        <Text style={styles.enrichmentText}>Enhancing links...</Text>
+                        <Text style={styles.enrichmentText}>{t.enhancingLinks}</Text>
                       </View>
                     )}
                   </View>
@@ -678,7 +680,7 @@ export default function ResultScreen() {
                 >
                   <View style={styles.viewSavedContent}>
                     <Ionicons name="library" size={20} color="#000000" />
-                    <Text style={styles.modernViewSavedText}>View All Saved Places</Text>
+                    <Text style={styles.modernViewSavedText}>{t.viewAllSaved}</Text>
                     <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
                   </View>
                 </TouchableOpacity>
@@ -699,7 +701,7 @@ export default function ResultScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name="chatbubbles" size={20} color="#ffffff" />
-          <Text style={styles.floatingAskAIText}>Ask AI</Text>
+          <Text style={styles.floatingAskAIText}>{t.askAI}</Text>
         </TouchableOpacity>
       )}
 

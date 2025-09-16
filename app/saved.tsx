@@ -15,8 +15,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { deleteSavedPlace, getSavedPlaces } from '../services/storageService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function SavedScreen() {
+  const { texts: t } = useLanguage();
   const [savedPlaces, setSavedPlaces] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,19 +41,19 @@ export default function SavedScreen() {
 
   const handleDelete = (id: string, name:string) => {
     Alert.alert(
-      'Delete Saved Place',
+      t.delete,
       `Are you sure you want to delete "${name}"?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t.cancel, style: 'cancel' },
         {
-          text: 'Delete',
+          text: t.delete,
           style: 'destructive',
           onPress: async () => {
             try {
               await deleteSavedPlace(id);
               await loadSavedPlaces();
             } catch (error) {
-              Alert.alert('Error', 'Failed to delete saved place');
+              Alert.alert(t.error, 'Failed to delete saved place');
             }
           },
         },
@@ -80,7 +82,7 @@ export default function SavedScreen() {
           {item.userLocation || item.location}
         </Text>
         <Text style={styles.itemDate}>
-          Saved {new Date(item.savedAt).toLocaleDateString()}
+          {t.save} {new Date(item.savedAt).toLocaleDateString()}
         </Text>
       </View>
       <TouchableOpacity
@@ -97,7 +99,7 @@ export default function SavedScreen() {
       <View style={styles.container}>
         <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading saved places...</Text>
+          <Text style={styles.loadingText}>{t.loading}</Text>
         </View>
       </View>
     );
@@ -118,7 +120,7 @@ export default function SavedScreen() {
               <Ionicons name="arrow-back" size={24} color="#2c3e50" />
             </TouchableOpacity>
             <View style={styles.headerContent}>
-              <Text style={styles.headerTitle}>Saved Landmarks</Text>
+              <Text style={styles.headerTitle}>{t.savedPlaces}</Text>
               <Text style={styles.headerSubtitle}>{savedPlaces.length} places saved</Text>
             </View>
             <View style={styles.headerRight} />
@@ -129,15 +131,15 @@ export default function SavedScreen() {
       {savedPlaces.length === 0 ? (
         <View style={styles.emptyState}>
           <Text style={styles.emptyIcon}>🏛️</Text>
-          <Text style={styles.emptyTitle}>No saved places yet</Text>
+          <Text style={styles.emptyTitle}>{t.noSavedPlaces}</Text>
           <Text style={styles.emptySubtitle}>
-            Take photos of landmarks places and save them for later!
+            {t.startExploring}
           </Text>
           <TouchableOpacity
             style={styles.exploreButton}
             onPress={() => router.push('/')}
           >
-            <Text style={styles.exploreButtonText}>Start Exploring</Text>
+            <Text style={styles.exploreButtonText}>{t.startExploringButton}</Text>
           </TouchableOpacity>
         </View>
       ) : (

@@ -1,14 +1,19 @@
-// app/_layout.tsx - Updated with Custom Splash Screen
+// app/_layout.tsx - Updated with Onboarding and Language Context
 import { Stack } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SplashScreen from '../components/SplashScreen';
+import OnboardingFlow from '../components/OnboardingFlow';
+import { LanguageProvider } from '../contexts/LanguageContext';
 import { initializePurchases } from '../services/subscriptionService';
+import { hasCompletedOnboarding } from '../services/storageService';
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const [showSplash, setShowSplash] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
   
   useEffect(() => {
     const initializeApp = async () => {
@@ -34,8 +39,27 @@ export default function RootLayout() {
     initializeApp();
   }, []);
 
-  const handleSplashComplete = () => {
+  const handleSplashComplete = async () => {
+    // Check onboarding status before hiding splash
+    try {
+      const hasCompleted = await hasCompletedOnboarding();
+      console.log('🔍 Onboarding completed:', hasCompleted);
+      
+      if (!hasCompleted) {
+        setShowOnboarding(true);
+      }
+      setOnboardingChecked(true);
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      setOnboardingChecked(true);
+    }
+    
+    // Hide splash after onboarding check
     setShowSplash(false);
+  };
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
   };
 
   // Show custom splash screen first
@@ -47,8 +71,17 @@ export default function RootLayout() {
     );
   }
 
-  // Show loading if app is still initializing
-  if (isLoading) {
+  // Show onboarding for first-time users
+  if (showOnboarding) {
+    return (
+      <SafeAreaProvider>
+        <OnboardingFlow onComplete={handleOnboardingComplete} />
+      </SafeAreaProvider>
+    );
+  }
+
+  // Show loading only if app is still initializing AND splash is complete
+  if (isLoading && !showSplash) {
     return (
       <SafeAreaProvider>
         <View style={{ 
@@ -73,46 +106,56 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen 
-          name="paywall" 
-          options={{ 
-            headerShown: false,
-            gestureEnabled: false,
-            presentation: 'modal'
-          }} 
-        />
-        <Stack.Screen 
-          name="index" 
-          options={{ 
-            headerShown: false
-          }} 
-        />
-        <Stack.Screen 
-          name="camera" 
-          options={{ 
-            headerShown: false
-          }} 
-        />
-        <Stack.Screen 
-          name="result" 
-          options={{ 
-            headerShown: false
-          }} 
-        />
-        <Stack.Screen 
-          name="saved" 
-          options={{ 
-            headerShown: false
-          }} 
-        />
-        <Stack.Screen 
-          name="settings" 
-          options={{ 
-            headerShown: false
-          }} 
-        />
-      </Stack>
+      <LanguageProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen 
+            name="onboarding" 
+            options={{ 
+              headerShown: false,
+              gestureEnabled: false,
+              presentation: 'modal'
+            }} 
+          />
+          <Stack.Screen 
+            name="paywall" 
+            options={{ 
+              headerShown: false,
+              gestureEnabled: false,
+              presentation: 'modal'
+            }} 
+          />
+          <Stack.Screen 
+            name="index" 
+            options={{ 
+              headerShown: false
+            }} 
+          />
+          <Stack.Screen 
+            name="camera" 
+            options={{ 
+              headerShown: false
+            }} 
+          />
+          <Stack.Screen 
+            name="result" 
+            options={{ 
+              headerShown: false
+            }} 
+          />
+          <Stack.Screen 
+            name="saved" 
+            options={{ 
+              headerShown: false
+            }} 
+          />
+          <Stack.Screen 
+            name="settings" 
+            options={{ 
+              headerShown: false
+            }} 
+          />
+        </Stack>
+      </LanguageProvider>
     </SafeAreaProvider>
   );
 }
