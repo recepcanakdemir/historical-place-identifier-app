@@ -51,6 +51,26 @@ export const de = {
     },
   },
 
+  // Camera Screen
+  camera: {
+    photo: 'Foto',
+    locationEnabled: 'Standort aktiviert',
+    locationDisabled: 'Standort deaktiviert',
+    gettingLocation: 'Standort wird ermittelt...',
+    pointAtHistorical: 'Auf ein historisches Gebäude oder Denkmal zeigen',
+    permissions: {
+      cameraRequired: 'Kamera-Zugriff Erforderlich',
+      cameraMessage: 'Wir benötigen Zugriff auf Ihre Kamera, um historische Orte und Denkmäler zu analysieren.',
+      locationTitle: 'Standort für Bessere Analyse',
+      locationMessage: 'Standortzugriff für genauere Identifizierung historischer Orte erlauben?\n\nDies hilft unserer KI, besseren Kontext über Denkmäler in Ihrer Nähe zu liefern.',
+    },
+    actions: {
+      openSettings: 'Einstellungen Öffnen',
+      goBack: 'Zurück',
+      allow: 'Erlauben',
+    },
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'Erkunden Beginnen',
   welcomeToPremium: 'Willkommen bei Premium! Sie haben jetzt unbegrenzten Zugang zu allen Funktionen.',

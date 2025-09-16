@@ -2,7 +2,7 @@
   "expo": {
     "name": "LandmarkAI",
     "slug": "HistoricalPlacesFinder",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "landmarkai",
@@ -102,7 +102,6 @@
       "router": {
         "origin": false
       },
-      "googlePlacesApiKey": "AIzaSyBaK7Z7G5BXoulth-4HfURbFI0HrTLMF4w",
       "eas": {
         "projectId": "e56d4b56-21a6-4eb4-b2b9-6367c6c80fbc"
       }

@@ -91,10 +91,8 @@ export const checkAppAccess = async (): Promise<AccessResult> => {
 export const checkFirstLaunch = async (): Promise<boolean> => {
   try {
     console.log('🔍 Checking first launch...');
-    console.log('🔑 FIRST_LAUNCH_KEY:', FIRST_LAUNCH_KEY);
     
     const hasLaunched = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
-    console.log('📱 AsyncStorage.getItem result:', hasLaunched);
     
     const isFirstLaunch = hasLaunched === null;
     console.log('🎯 Is first launch?', isFirstLaunch);
@@ -112,10 +110,8 @@ export const checkFirstLaunch = async (): Promise<boolean> => {
 export const markAsLaunched = async (): Promise<boolean> => {
   try {
     console.log('🏷️  Marking app as launched...');
-    console.log('🔑 Setting FIRST_LAUNCH_KEY:', FIRST_LAUNCH_KEY);
     
     await AsyncStorage.setItem(FIRST_LAUNCH_KEY, 'true');
-    console.log('✅ AsyncStorage.setItem completed');
     
     // Verify the write was successful
     const verification = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
@@ -220,9 +216,9 @@ export const getAccessStatus = async () => {
     const rawFirstLaunch = await AsyncStorage.getItem(FIRST_LAUNCH_KEY);
     const rawFreeTrialUsed = await AsyncStorage.getItem(FREE_TRIAL_USED_KEY);
     
-    console.log('   - FREE_TRIAL_SESSION_KEY:', rawFreeTrialSession);
-    console.log('   - FIRST_LAUNCH_KEY:', rawFirstLaunch);
-    console.log('   - FREE_TRIAL_USED_KEY:', rawFreeTrialUsed);
+    console.log('   - Trial session active:', rawFreeTrialSession);
+    console.log('   - First launch completed:', rawFirstLaunch);
+    console.log('   - Trial used:', rawFreeTrialUsed);
     
     const status = {
       isPremium,

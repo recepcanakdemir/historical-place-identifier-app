@@ -297,3 +297,202 @@ TALİMATLAR:
     res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// Places API proxy function - Secure server-side implementation
+exports.placesProxy = onRequest(async (req, res) => {
+  // CORS headers
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.set('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+
+  // Handle GET requests for photo endpoints
+  if (req.method === 'GET') {
+    const { endpoint, query } = req.query;
+    
+    if (endpoint === 'photo' && query) {
+      const PLACES_API_KEY = process.env.PLACES_API_KEY;
+      
+      if (!PLACES_API_KEY) {
+        res.status(500).json({ error: 'Places API key not configured on server' });
+        return;
+      }
+      
+      const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${query}&key=${PLACES_API_KEY}`;
+      
+      try {
+        const photoResponse = await fetch(photoUrl);
+        
+        if (!photoResponse.ok) {
+          logger.error("Photo fetch failed:", photoResponse.status);
+          res.status(photoResponse.status).send('Photo not found');
+          return;
+        }
+        
+        const photoBuffer = await photoResponse.buffer();
+        const contentType = photoResponse.headers.get('content-type') || 'image/jpeg';
+        
+        res.set('Content-Type', contentType);
+        res.set('Cache-Control', 'public, max-age=86400');
+        res.send(photoBuffer);
+        
+        logger.info("Photo successfully proxied via GET");
+        return;
+        
+      } catch (error) {
+        logger.error("Photo GET proxy error:", error);
+        res.status(500).send('Photo proxy error');
+        return;
+      }
+    }
+    
+    res.status(400).json({ error: 'Invalid GET request' });
+    return;
+  }
+
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  try {
+    // Get Places API key from environment variable (secure)
+    const PLACES_API_KEY = process.env.PLACES_API_KEY;
+    
+    if (!PLACES_API_KEY) {
+      logger.error("PLACES_API_KEY environment variable not set");
+      res.status(500).json({ error: 'Places API key not configured on server' });
+      return;
+    }
+
+    const { endpoint, query, locationBias, placeId, fields } = req.body;
+    
+    if (!endpoint) {
+      res.status(400).json({ error: 'Missing required parameter: endpoint' });
+      return;
+    }
+    
+    // Validate required parameters based on endpoint
+    if ((endpoint === 'textsearch' || endpoint === 'findplacefromtext' || endpoint === 'photo') && !query) {
+      res.status(400).json({ error: 'Missing required parameter: query' });
+      return;
+    }
+    
+    if (endpoint === 'details' && !placeId) {
+      res.status(400).json({ error: 'Missing required parameter: placeId for details endpoint' });
+      return;
+    }
+
+    const baseUrl = 'https://maps.googleapis.com/maps/api/place';
+    let url = '';
+    
+    logger.info(`Places API ${endpoint} request for:`, query);
+    
+    // Route different Places API endpoints
+    switch (endpoint) {
+      case 'textsearch':
+        url = `${baseUrl}/textsearch/json?query=${encodeURIComponent(query)}&key=${PLACES_API_KEY}`;
+        if (locationBias) {
+          url += `&location=${locationBias.lat},${locationBias.lng}&radius=${locationBias.radius || 5000}`;
+          logger.info("Added location bias:", locationBias);
+        }
+        break;
+        
+      case 'findplacefromtext':
+        url = `${baseUrl}/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=${fields || 'place_id,name,geometry,formatted_address'}&key=${PLACES_API_KEY}`;
+        break;
+        
+      case 'details':
+        url = `${baseUrl}/details/json?place_id=${placeId}&fields=${fields || 'photos'}&key=${PLACES_API_KEY}`;
+        break;
+        
+      case 'photo':
+        // Proxy the photo data directly to avoid CORS issues
+        const photoUrl = `${baseUrl}/photo?maxwidth=400&photoreference=${query}&key=${PLACES_API_KEY}`;
+        logger.info("Fetching photo for reference:", query.substring(0, 20) + '...');
+        
+        try {
+          const photoResponse = await fetch(photoUrl);
+          
+          if (!photoResponse.ok) {
+            logger.error("Photo fetch failed:", photoResponse.status);
+            res.status(photoResponse.status).json({ 
+              error: 'Photo fetch failed', 
+              status: photoResponse.status 
+            });
+            return;
+          }
+          
+          // Get the image data and content type
+          const photoBuffer = await photoResponse.buffer();
+          const contentType = photoResponse.headers.get('content-type') || 'image/jpeg';
+          
+          // Set appropriate headers and return the image data
+          res.set('Content-Type', contentType);
+          res.set('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+          res.send(photoBuffer);
+          
+          logger.info("Photo successfully proxied");
+          return;
+          
+        } catch (photoError) {
+          logger.error("Photo proxy error:", photoError);
+          res.status(500).json({ 
+            error: 'Photo proxy failed', 
+            message: photoError.message 
+          });
+          return;
+        }
+        
+      default:
+        res.status(400).json({ error: `Unsupported endpoint: ${endpoint}` });
+        return;
+    }
+
+    // Make request to Google Places API
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!response.ok) {
+      logger.error("Places API error:", { 
+        status: response.status, 
+        error: data.error_message || data 
+      });
+      res.status(response.status).json({ 
+        error: 'Places API request failed', 
+        message: data.error_message || 'Unknown error',
+        status: data.status 
+      });
+      return;
+    }
+
+    // Check for Places API specific errors
+    if (data.status && data.status !== 'OK') {
+      logger.warn("Places API returned non-OK status:", data.status);
+      if (data.status === 'REQUEST_DENIED') {
+        res.status(403).json({ 
+          error: 'Places API access denied', 
+          message: 'Please check API key and enable Places API in Google Cloud Console',
+          status: data.status 
+        });
+        return;
+      }
+    }
+    
+    logger.info(`Places API ${endpoint} request successful, status:`, data.status || 'OK');
+    
+    // Success - return data
+    res.status(200).json(data);
+    
+  } catch (error) {
+    logger.error("Places proxy error:", error);
+    res.status(500).json({ 
+      error: 'Places API proxy error', 
+      message: error.message 
+    });
+  }
+});

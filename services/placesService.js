@@ -1,4 +1,4 @@
-// services/placesService.js - Google Places API Integration
+// services/placesService.js - Firebase Functions Proxy Version
 import Constants from 'expo-constants';
 
 // Safe coordinate parsing to prevent NaN values that cause CoreGraphics errors
@@ -13,19 +13,14 @@ const safeParseCoordinate = (value) => {
   return isNaN(parsed) ? 0 : parsed;
 };
 
-// Configuration
+// Configuration - Firebase Functions Proxy
 const PLACES_CONFIG = {
-  API_KEY: Constants.expoConfig?.extra?.googlePlacesApiKey || '',
-  BASE_URL: 'https://maps.googleapis.com/maps/api/place',
-  TIMEOUT: 10000
+  FUNCTIONS_URL: 'https://us-central1-landmarkai-55530.cloudfunctions.net/placesProxy',
+  TIMEOUT: 15000, // Increased for server-side processing
+  PHOTO_CACHE: new Map() // Cache photo URLs to reduce server calls
 };
 
-// Debug: Check if API key is loaded
-console.log('🔑 Google Places API key status:', {
-  hasKey: !!PLACES_CONFIG.API_KEY,
-  keyLength: PLACES_CONFIG.API_KEY ? PLACES_CONFIG.API_KEY.length : 0,
-  keyPrefix: PLACES_CONFIG.API_KEY ? PLACES_CONFIG.API_KEY.substring(0, 20) + '...' : 'NOT_FOUND'
-});
+console.log('🔑 Places API using Firebase Functions proxy');
 
 // Helper function to create Google Maps URL with coordinates (reliable navigation)
 const createMapsUrl = (placeId, placeName, latitude, longitude) => {
@@ -40,23 +35,31 @@ const createMapsUrl = (placeId, placeName, latitude, longitude) => {
   return `https://www.google.com/maps/place/?q=place_id:${placeId}`;
 };
 
-// Helper function to get place photos
+// Helper function to get place photos via Firebase proxy
 const getPlacePhotos = async (placeId) => {
   try {
-    console.log('📸 Fetching photos for place ID:', placeId);
+    console.log('📸 Fetching photos for place ID via Firebase:', placeId);
     
-    if (!PLACES_CONFIG.API_KEY || !placeId) {
+    if (!placeId) {
       return null;
     }
 
-    const url = `${PLACES_CONFIG.BASE_URL}/details/json?place_id=${placeId}&fields=photos&key=${PLACES_CONFIG.API_KEY}`;
-    
-    const response = await fetch(url, {
+    // Call Firebase Functions proxy for place details
+    const response = await fetch(PLACES_CONFIG.FUNCTIONS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        endpoint: 'details',
+        placeId: placeId,
+        fields: 'photos'
+      }),
       timeout: PLACES_CONFIG.TIMEOUT
     });
 
     if (!response.ok) {
-      throw new Error(`Places Details API error: ${response.status}`);
+      throw new Error(`Places proxy error: ${response.status}`);
     }
 
     const data = await response.json();
@@ -67,12 +70,22 @@ const getPlacePhotos = async (placeId) => {
     }
 
     const photos = data.result.photos.slice(0, 5); // Limit to 5 photos
-    const photoData = photos.map(photo => ({
-      photoReference: photo.photo_reference,
-      width: photo.width,
-      height: photo.height,
-      url: `${PLACES_CONFIG.BASE_URL}/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${PLACES_CONFIG.API_KEY}`
-    }));
+    
+    // Generate photo URLs that point to our Firebase proxy
+    const photoData = photos.map(photo => {
+      const photoUrl = `${PLACES_CONFIG.FUNCTIONS_URL}?endpoint=photo&query=${photo.photo_reference}`;
+      
+      const photoObj = {
+        photoReference: photo.photo_reference,
+        width: photo.width,
+        height: photo.height,
+        url: photoUrl // Direct proxy URL that serves the image
+      };
+      
+      // Cache for performance
+      PLACES_CONFIG.PHOTO_CACHE.set(photo.photo_reference, photoObj);
+      return photoObj;
+    });
 
     console.log('✅ Found', photoData.length, 'photos for place');
     return {
@@ -86,47 +99,49 @@ const getPlacePhotos = async (placeId) => {
   }
 };
 
-// Search for a place using Google Places Text Search API
+// Search for a place using Firebase Functions proxy
 const searchPlace = async (placeName, location = null) => {
   try {
-    console.log('🔍 Searching for place:', placeName);
+    console.log('🔍 Searching for place via Firebase:', placeName);
     
-    if (!PLACES_CONFIG.API_KEY) {
-      console.warn('⚠️ Google Places API key not configured');
-      return null;
-    }
-
-    // Build search query
-    let query = placeName;
+    // Build request for Firebase proxy
+    const requestBody = {
+      endpoint: 'textsearch',
+      query: placeName
+    };
     
     // Add location bias if provided
-    let locationBias = '';
     if (location && location.latitude && location.longitude) {
-      locationBias = `&location=${location.latitude},${location.longitude}&radius=5000`;
+      requestBody.locationBias = {
+        lat: location.latitude,
+        lng: location.longitude,
+        radius: 5000
+      };
     }
 
-    const url = `${PLACES_CONFIG.BASE_URL}/textsearch/json?query=${encodeURIComponent(query)}&key=${PLACES_CONFIG.API_KEY}${locationBias}`;
-    
-    console.log('🌐 Places API URL (without key):', url.replace(PLACES_CONFIG.API_KEY, '[API_KEY]'));
+    console.log('🌐 Sending request to Firebase Places proxy');
 
-    const response = await fetch(url, {
+    const response = await fetch(PLACES_CONFIG.FUNCTIONS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
       timeout: PLACES_CONFIG.TIMEOUT
     });
 
     if (!response.ok) {
-      throw new Error(`Places API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ Firebase proxy error:', response.status, errorText);
+      throw new Error(`Firebase proxy error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('📊 Places API response status:', data.status);
+    console.log('📊 Firebase proxy response status:', data.status);
 
-    if (data.status === 'REQUEST_DENIED') {
-      console.error('❌ Google Places API REQUEST_DENIED');
-      console.error('💡 Solution: Enable Places API in Google Cloud Console:');
-      console.error('   1. Go to https://console.cloud.google.com/apis/library/places-backend.googleapis.com');
-      console.error('   2. Select your project and click "Enable"');
-      console.error('   3. Also enable "Places API (New)" if available');
-      throw new Error('Places API not enabled. Enable it in Google Cloud Console.');
+    if (data.error) {
+      console.error('❌ Places API error from Firebase:', data.error);
+      throw new Error(data.error);
     }
 
     if (data.status !== 'OK' || !data.results || data.results.length === 0) {
@@ -135,7 +150,7 @@ const searchPlace = async (placeName, location = null) => {
     }
 
     const place = data.results[0]; // Get the first result
-    console.log('✅ Found place:', place.name);
+    console.log('✅ Found place via Firebase:', place.name);
 
     // Fetch photos for this place
     const photoData = await getPlacePhotos(place.place_id);
@@ -153,7 +168,7 @@ const searchPlace = async (placeName, location = null) => {
     };
 
   } catch (error) {
-    console.error('❌ Error searching place:', error);
+    console.error('❌ Error searching place via Firebase:', error);
     return null;
   }
 };
@@ -166,19 +181,8 @@ export const enrichNearbyPlaces = async (nearbyPlaces, currentLocation = null) =
     return nearbyPlaces;
   }
 
-  if (!PLACES_CONFIG.API_KEY) {
-    console.warn('⚠️ Google Places API key not configured - using fallback coordinates');
-    console.warn('💡 To fix: Add your API key to app.json extra.googlePlacesApiKey');
-    return nearbyPlaces.map(place => ({
-      ...place,
-      // Ensure coordinates are numbers, not objects
-      latitude: safeParseCoordinate(place.latitude),
-      longitude: safeParseCoordinate(place.longitude),
-      mapsLink: place.latitude && place.longitude 
-        ? `https://www.google.com/maps/@${place.latitude},${place.longitude},15z`
-        : `https://www.google.com/maps/search/${encodeURIComponent(place.name)}`
-    }));
-  }
+  // Firebase proxy is always available - no API key check needed on client
+  console.log('🔧 Using Firebase Functions proxy for Places API');
 
   // Process places in parallel with rate limiting
   const enrichedPlaces = await Promise.allSettled(
@@ -272,24 +276,36 @@ export const enrichNearbyPlaces = async (nearbyPlaces, currentLocation = null) =
   return results;
 };
 
-// Get place details by place ID
+// Get place details by place ID via Firebase proxy
 export const getPlaceDetails = async (placeId) => {
   try {
-    console.log('📋 Getting details for place ID:', placeId);
+    console.log('📋 Getting details via Firebase for place ID:', placeId);
     
-    if (!PLACES_CONFIG.API_KEY) {
-      throw new Error('Google Places API key not configured');
-    }
-
-    const url = `${PLACES_CONFIG.BASE_URL}/details/json?place_id=${placeId}&key=${PLACES_CONFIG.API_KEY}&fields=name,formatted_address,geometry,rating,reviews,photos,opening_hours,website,formatted_phone_number`;
-
-    const response = await fetch(url);
+    const response = await fetch(PLACES_CONFIG.FUNCTIONS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        endpoint: 'details',
+        placeId: placeId,
+        fields: 'name,formatted_address,geometry,rating,reviews,photos,opening_hours,website,formatted_phone_number'
+      }),
+      timeout: PLACES_CONFIG.TIMEOUT
+    });
     
     if (!response.ok) {
-      throw new Error(`Places API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ Firebase proxy error:', response.status, errorText);
+      throw new Error(`Firebase proxy error: ${response.status}`);
     }
 
     const data = await response.json();
+
+    if (data.error) {
+      console.error('❌ Places API error from Firebase:', data.error);
+      throw new Error(data.error);
+    }
 
     if (data.status !== 'OK' || !data.result) {
       throw new Error(`Place details not found: ${data.status}`);
@@ -297,45 +313,48 @@ export const getPlaceDetails = async (placeId) => {
 
     return data.result;
   } catch (error) {
-    console.error('❌ Error getting place details:', error);
+    console.error('❌ Error getting place details via Firebase:', error);
     throw error;
   }
 };
 
-// Get Place ID from place name (for two-phase approach)
+// Get Place ID from place name via Firebase proxy
 export const getPlaceIdFromName = async (placeName, city = null) => {
   try {
-    console.log('🔍 Getting Place ID for:', placeName);
+    console.log('🔍 Getting Place ID via Firebase for:', placeName);
     
-    if (!PLACES_CONFIG.API_KEY) {
-      console.warn('⚠️ Google Places API key not configured');
-      return null;
-    }
-
     // Build search query - prioritize "name, city" format
     let query = placeName;
     if (city && !placeName.includes(',')) {
       query = `${placeName}, ${city}`;
     }
 
-    const url = `${PLACES_CONFIG.BASE_URL}/findplacefromtext/json?input=${encodeURIComponent(query)}&inputtype=textquery&fields=place_id,name,geometry,formatted_address&key=${PLACES_CONFIG.API_KEY}`;
-    
-    console.log('🌐 Places API URL (without key):', url.replace(PLACES_CONFIG.API_KEY, '[API_KEY]'));
+    console.log('🌐 Sending findplacefromtext request to Firebase proxy');
 
-    const response = await fetch(url, {
+    const response = await fetch(PLACES_CONFIG.FUNCTIONS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        endpoint: 'findplacefromtext',
+        query: query,
+        fields: 'place_id,name,geometry,formatted_address'
+      }),
       timeout: PLACES_CONFIG.TIMEOUT
     });
 
     if (!response.ok) {
-      throw new Error(`Places API error: ${response.status}`);
+      const errorText = await response.text();
+      console.error('❌ Firebase proxy error:', response.status, errorText);
+      throw new Error(`Firebase proxy error: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('📊 Places API response status:', data.status);
+    console.log('📊 Firebase proxy response status:', data.status);
 
-    if (data.status === 'REQUEST_DENIED') {
-      console.error('❌ Google Places API REQUEST_DENIED');
-      console.error('💡 Solution: Enable Places API in Google Cloud Console');
+    if (data.error) {
+      console.error('❌ Places API error from Firebase:', data.error);
       return null;
     }
 
@@ -345,7 +364,7 @@ export const getPlaceIdFromName = async (placeName, city = null) => {
     }
 
     const place = data.candidates[0];
-    console.log('✅ Found Place ID for:', place.name);
+    console.log('✅ Found Place ID via Firebase for:', place.name);
 
     return {
       placeId: place.place_id,
@@ -357,7 +376,7 @@ export const getPlaceIdFromName = async (placeName, city = null) => {
     };
 
   } catch (error) {
-    console.error('❌ Error getting Place ID:', error);
+    console.error('❌ Error getting Place ID via Firebase:', error);
     return null;
   }
 };
@@ -392,17 +411,8 @@ export const enrichNearbyPlacesWithPlaceId = async (nearbyPlaces, currentLocatio
     return nearbyPlaces;
   }
 
-  if (!PLACES_CONFIG.API_KEY) {
-    console.warn('⚠️ Google Places API key not configured - using fallback coordinates');
-    return nearbyPlaces.map(place => ({
-      ...place,
-      latitude: safeParseCoordinate(place.latitude),
-      longitude: safeParseCoordinate(place.longitude),
-      mapsLink: place.latitude && place.longitude 
-        ? `https://www.google.com/maps/@${place.latitude},${place.longitude},15z`
-        : `https://www.google.com/maps/search/${encodeURIComponent(place.name)}`
-    }));
-  }
+  // Firebase proxy is always available - no API key check needed on client
+  console.log('🔧 Using Firebase Functions proxy for enhanced Places enrichment');
 
   // Process places in parallel with rate limiting
   const enrichedPlaces = await Promise.allSettled(
@@ -520,7 +530,7 @@ export const enrichNearbyPlacesWithPlaceId = async (nearbyPlaces, currentLocatio
   return results;
 };
 
-// Check if Places API is configured
+// Check if Places API proxy is configured
 export const isPlacesApiConfigured = () => {
-  return Boolean(PLACES_CONFIG.API_KEY);
+  return Boolean(PLACES_CONFIG.FUNCTIONS_URL);
 };

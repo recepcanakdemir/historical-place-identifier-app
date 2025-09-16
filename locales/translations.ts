@@ -628,6 +628,11 @@ export const translations = {
     aiGuide: 'Guide IA',
     instantInsights: 'Perspectives historiques instantanées',
     
+    // Camera permissions
+    locationForBetter: 'Localisation pour une Meilleure Analyse',
+    locationPermissionMessage: 'Autoriser l\'accès à la localisation pour une identification plus précise des lieux historiques?\n\nCela aide notre IA à fournir un meilleur contexte sur les monuments près de vous.',
+    allow: 'Autoriser',
+    
     // Usage Limits
     analysisLimitReached: 'Limite d\'Analyse Atteinte',
     usedFreeAnalysis: 'Vous avez utilisé votre {count} analyse gratuite!',
@@ -781,6 +786,11 @@ export const translations = {
     saveDiscoveries: 'Erstellen Sie Ihr Reisetagebuch',
     aiGuide: 'KI-Führer',
     instantInsights: 'Sofortige historische Einblicke',
+    
+    // Camera permissions
+    locationForBetter: 'Standort für Bessere Analyse',
+    locationPermissionMessage: 'Standortzugriff für genauere Identifizierung historischer Orte erlauben?\n\nDies hilft unserer KI, besseren Kontext über Denkmäler in Ihrer Nähe zu liefern.',
+    allow: 'Erlauben',
     
     // Usage Limits
     analysisLimitReached: 'Analyselimit Erreicht',
@@ -936,6 +946,11 @@ export const translations = {
     aiGuide: 'Guida IA',
     instantInsights: 'Intuizioni storiche istantanee',
     
+    // Camera permissions
+    locationForBetter: 'Posizione per Analisi Migliore',
+    locationPermissionMessage: 'Consentire l\'accesso alla posizione per identificazione più accurata dei luoghi storici?\n\nQuesto aiuta la nostra IA a fornire miglior contesto sui monumenti vicino a te.',
+    allow: 'Consenti',
+    
     // Usage Limits
     analysisLimitReached: 'Limite di Analisi Raggiunto',
     usedFreeAnalysis: 'Hai utilizzato la tua {count} analisi gratuita!',
@@ -1089,6 +1104,11 @@ export const translations = {
     saveDiscoveries: 'اصنع مذكرات سفرك',
     aiGuide: 'دليل الذكاء الاصطناعي',
     instantInsights: 'رؤى تاريخية فورية',
+    
+    // Camera permissions
+    locationForBetter: 'الموقع لتحليل أفضل',
+    locationPermissionMessage: 'السماح بالوصول للموقع لتحديد أكثر دقة للأماكن التاريخية؟\n\nهذا يساعد الذكاء الاصطناعي على توفير سياق أفضل حول المعالم القريبة منك.',
+    allow: 'السماح',
     
     // Usage Limits
     analysisLimitReached: 'تم الوصول إلى حد التحليل',
@@ -1244,6 +1264,11 @@ export const translations = {
     aiGuide: 'ИИ Гид',
     instantInsights: 'Мгновенные исторические сведения',
     
+    // Camera permissions
+    locationForBetter: 'Местоположение для Лучшего Анализа',
+    locationPermissionMessage: 'Разрешить доступ к местоположению для более точной идентификации исторических мест?\n\nЭто помогает нашему ИИ предоставлять лучший контекст о памятниках рядом с вами.',
+    allow: 'Разрешить',
+    
     // Usage Limits
     analysisLimitReached: 'Достигнут Лимит Анализа',
     usedFreeAnalysis: 'Вы использовали свой {count} бесплатный анализ!',
@@ -1398,6 +1423,11 @@ export const translations = {
     aiGuide: 'AI指南',
     instantInsights: '即时历史见解',
     
+    // Camera permissions
+    locationForBetter: '位置信息以获得更好的分析',
+    locationPermissionMessage: '允许位置访问以更准确地识别历史地点？\n\n这有助于我们的AI为您提供关于附近地标的更好上下文。',
+    allow: '允许',
+    
     // Usage Limits
     analysisLimitReached: '达到分析限制',
     usedFreeAnalysis: '您已使用了{count}次免费分析！',
@@ -1551,6 +1581,11 @@ export const translations = {
     saveDiscoveries: '旅行日記を作成',
     aiGuide: 'AIガイド',
     instantInsights: '瞬時の歴史的洞察',
+    
+    // Camera permissions
+    locationForBetter: 'より良い分析のための位置情報',
+    locationPermissionMessage: 'より正確な歴史的場所の識別のために位置情報へのアクセスを許可しますか？\n\nこれにより、私たちのAIがあなたの近くのランドマークについてより良いコンテキストを提供できます。',
+    allow: '許可',
     
     // Usage Limits
     analysisLimitReached: '分析制限に達しました',

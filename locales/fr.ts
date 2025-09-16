@@ -51,6 +51,26 @@ export const fr = {
     },
   },
 
+  // Camera Screen
+  camera: {
+    photo: 'Photo',
+    locationEnabled: 'Localisation activée',
+    locationDisabled: 'Localisation désactivée',
+    gettingLocation: 'Obtention de la localisation...',
+    pointAtHistorical: 'Pointez vers un bâtiment historique ou un monument',
+    permissions: {
+      cameraRequired: 'Accès Caméra Requis',
+      cameraMessage: 'Nous avons besoin d\'accéder à votre caméra pour analyser les lieux historiques et monuments.',
+      locationTitle: 'Localisation pour une Meilleure Analyse',
+      locationMessage: 'Autoriser l\'accès à la localisation pour une identification plus précise des lieux historiques?\n\nCela aide notre IA à fournir un meilleur contexte sur les monuments près de vous.',
+    },
+    actions: {
+      openSettings: 'Ouvrir les Paramètres',
+      goBack: 'Retour',
+      allow: 'Autoriser',
+    },
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'Commencer à Explorer',
   welcomeToPremium: 'Bienvenue dans Premium! Vous avez maintenant un accès illimité à toutes les fonctionnalités.',

@@ -39,15 +39,7 @@ export default function ResultScreen() {
     fromGallery?: string;
   }>();
   
-  // Debug params to find any objects
-  console.log('🔍 PARAMS INSPECTION:');
-  Object.keys(params).forEach((key: string) => {
-    const value = params[key as keyof typeof params];
-    console.log(`  ${key}:`, typeof value, value);
-    if (typeof value === 'object') {
-      console.error(`❌ FOUND OBJECT in params.${key}:`, value);
-    }
-  });
+  // Extract params
   
   const { imageUri, locationData, savedData, fromSaved, fromGallery } = params;
   const { texts: t } = useLanguage();

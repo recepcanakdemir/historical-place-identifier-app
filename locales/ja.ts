@@ -51,6 +51,26 @@ export const ja = {
     },
   },
 
+  // Camera Screen
+  camera: {
+    photo: '写真',
+    locationEnabled: '位置情報が有効',
+    locationDisabled: '位置情報が無効',
+    gettingLocation: '位置情報を取得中...',
+    pointAtHistorical: '歴史的建造物や記念碑に向けてください',
+    permissions: {
+      cameraRequired: 'カメラアクセスが必要',
+      cameraMessage: '歴史的な場所やモニュメントを分析するため、カメラへのアクセスが必要です。',
+      locationTitle: 'より良い分析のための位置情報',
+      locationMessage: 'より正確な歴史的場所の識別のために位置情報へのアクセスを許可しますか？\n\nこれにより、私たちのAIがあなたの近くのランドマークについてより良いコンテキストを提供できます。',
+    },
+    actions: {
+      openSettings: '設定を開く',
+      goBack: '戻る',
+      allow: '許可',
+    },
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: '探索を開始',
   welcomeToPremium: 'プレミアムへようこそ！すべての機能に無制限でアクセスできます。',

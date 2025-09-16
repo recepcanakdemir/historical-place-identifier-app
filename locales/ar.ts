@@ -51,6 +51,26 @@ export const ar = {
     },
   },
 
+  // Camera Screen
+  camera: {
+    photo: 'صورة',
+    locationEnabled: 'الموقع مُفعل',
+    locationDisabled: 'الموقع مُعطل',
+    gettingLocation: 'جاري الحصول على الموقع...',
+    pointAtHistorical: 'وجه الكاميرا نحو مبنى تاريخي أو نصب تذكاري',
+    permissions: {
+      cameraRequired: 'مطلوب الوصول للكاميرا',
+      cameraMessage: 'نحتاج للوصول إلى كاميرتك لتحليل الأماكن التاريخية والآثار.',
+      locationTitle: 'الموقع لتحليل أفضل',
+      locationMessage: 'السماح بالوصول للموقع لتحديد أكثر دقة للأماكن التاريخية؟\n\nهذا يساعد الذكاء الاصطناعي على توفير سياق أفضل حول المعالم القريبة منك.',
+    },
+    actions: {
+      openSettings: 'فتح الإعدادات',
+      goBack: 'العودة',
+      allow: 'السماح',
+    },
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'ابدأ الاستكشاف',
   welcomeToPremium: 'مرحباً بك في البريميوم! لديك الآن وصول غير محدود لجميع الميزات.',

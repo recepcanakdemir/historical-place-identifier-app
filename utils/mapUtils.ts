@@ -52,11 +52,11 @@ export const openInMaps = async (place: NearbyPlace, currentLocation?: { latitud
         // Apple Maps with exact coordinates
         if (currentLocation) {
           // Directions from current location to exact coordinates
-          url = `http://maps.apple.com/?saddr=${currentLocation.latitude},${currentLocation.longitude}&daddr=${place.latitude},${place.longitude}&dirflg=w`;
+          url = `https://maps.apple.com/?saddr=${currentLocation.latitude},${currentLocation.longitude}&daddr=${place.latitude},${place.longitude}&dirflg=w`;
         } else {
           // Just show the exact location with optional label
           const placeLabel = encodeURIComponent(place.name);
-          url = `http://maps.apple.com/?ll=${place.latitude},${place.longitude}&q=${placeLabel}`;
+          url = `https://maps.apple.com/?ll=${place.latitude},${place.longitude}&q=${placeLabel}`;
         }
         
         const canOpenAppleMaps = await Linking.canOpenURL(url);
@@ -129,11 +129,11 @@ export const getDirectionsUrl = (place: NearbyPlace, currentLocation?: { latitud
     if (Platform.OS === 'ios') {
       if (currentLocation) {
         // Apple Maps directions with exact coordinates
-        return `http://maps.apple.com/?saddr=${currentLocation.latitude},${currentLocation.longitude}&daddr=${place.latitude},${place.longitude}&dirflg=w`;
+        return `https://maps.apple.com/?saddr=${currentLocation.latitude},${currentLocation.longitude}&daddr=${place.latitude},${place.longitude}&dirflg=w`;
       } else {
         // Just show the exact location
         const placeLabel = encodeURIComponent(place.name);
-        return `http://maps.apple.com/?ll=${place.latitude},${place.longitude}&q=${placeLabel}`;
+        return `https://maps.apple.com/?ll=${place.latitude},${place.longitude}&q=${placeLabel}`;
       }
     } else {
       if (currentLocation) {
@@ -151,9 +151,9 @@ export const getDirectionsUrl = (place: NearbyPlace, currentLocation?: { latitud
   
   if (Platform.OS === 'ios') {
     if (currentLocation) {
-      return `http://maps.apple.com/?q=${fallbackQuery}&saddr=${currentLocation.latitude},${currentLocation.longitude}&dirflg=w`;
+      return `https://maps.apple.com/?q=${fallbackQuery}&saddr=${currentLocation.latitude},${currentLocation.longitude}&dirflg=w`;
     } else {
-      return `http://maps.apple.com/?q=${fallbackQuery}`;
+      return `https://maps.apple.com/?q=${fallbackQuery}`;
     }
   } else {
     if (currentLocation) {

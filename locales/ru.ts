@@ -51,6 +51,26 @@ export const ru = {
     },
   },
 
+  // Camera Screen
+  camera: {
+    photo: 'Фото',
+    locationEnabled: 'Местоположение включено',
+    locationDisabled: 'Местоположение отключено',
+    gettingLocation: 'Получение местоположения...',
+    pointAtHistorical: 'Направьте на историческое здание или памятник',
+    permissions: {
+      cameraRequired: 'Требуется Доступ к Камере',
+      cameraMessage: 'Нам нужен доступ к вашей камере для анализа исторических мест и памятников.',
+      locationTitle: 'Местоположение для Лучшего Анализа',
+      locationMessage: 'Разрешить доступ к местоположению для более точной идентификации исторических мест?\n\nЭто помогает нашему ИИ предоставлять лучший контекст о памятниках рядом с вами.',
+    },
+    actions: {
+      openSettings: 'Открыть Настройки',
+      goBack: 'Назад',
+      allow: 'Разрешить',
+    },
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'Начать Исследование',
   welcomeToPremium: 'Добро пожаловать в Premium! Теперь у вас есть неограниченный доступ ко всем функциям.',

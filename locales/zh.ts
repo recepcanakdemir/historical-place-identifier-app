@@ -51,6 +51,26 @@ export const zh = {
     },
   },
 
+  // Camera Screen
+  camera: {
+    photo: '照片',
+    locationEnabled: '位置已启用',
+    locationDisabled: '位置已禁用',
+    gettingLocation: '正在获取位置...',
+    pointAtHistorical: '对准历史建筑或纪念碑',
+    permissions: {
+      cameraRequired: '需要相机访问权限',
+      cameraMessage: '我们需要访问您的相机来分析历史地点和纪念碑。',
+      locationTitle: '位置信息以获得更好的分析',
+      locationMessage: '允许位置访问以更准确地识别历史地点？\n\n这有助于我们的AI为您提供关于附近地标的更好上下文。',
+    },
+    actions: {
+      openSettings: '打开设置',
+      goBack: '返回',
+      allow: '允许',
+    },
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: '开始探索',
   welcomeToPremium: '欢迎使用高级版！您现在可以无限制地使用所有功能。',
