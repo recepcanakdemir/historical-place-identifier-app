@@ -18,6 +18,15 @@ export interface NearbyPlace {
   rating?: number;     // Google rating if available
   verifiedName?: string; // Verified name from Places API
   isEnriched?: boolean; // Flag to indicate if Place ID lookup is complete
+  photoUrl?: string;   // Primary photo URL for the place
+  photos?: PlacePhoto[]; // Array of all available photos
+}
+
+export interface PlacePhoto {
+  photoReference: string;
+  width: number;
+  height: number;
+  url?: string; // Generated photo URL
 }
 
 export interface PlaceInfo {

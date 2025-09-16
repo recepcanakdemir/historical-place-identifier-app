@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,6 +15,41 @@ interface NearbyPlacesProps {
   places: NearbyPlace[];
   onPlacePress?: (place: NearbyPlace) => void;
   currentLocation?: { latitude: number; longitude: number } | null;
+}
+
+// Component for place image with loading and fallback states
+function PlaceImage({ place }: { place: NearbyPlace }) {
+  const [imageLoading, setImageLoading] = useState(true);
+  const [imageError, setImageError] = useState(false);
+
+  if (!place.photoUrl || imageError) {
+    // Fallback placeholder
+    return (
+      <View style={styles.imagePlaceholder}>
+        <Ionicons name="image-outline" size={24} color="#9CA3AF" />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.imageContainer}>
+      <Image
+        source={{ uri: place.photoUrl }}
+        style={styles.placeImage}
+        onLoad={() => setImageLoading(false)}
+        onError={() => {
+          setImageError(true);
+          setImageLoading(false);
+        }}
+        resizeMode="cover"
+      />
+      {imageLoading && (
+        <View style={styles.imageLoader}>
+          <ActivityIndicator size="small" color="#13a4ec" />
+        </View>
+      )}
+    </View>
+  );
 }
 
 export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPlacesProps) {
@@ -155,10 +192,10 @@ export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPl
               activeOpacity={0.7}
             >
               <View style={styles.cardContent}>
+                {/* Place Image */}
+                <PlaceImage place={place} />
+                
                 <View style={styles.placeInfo}>
-                  <View style={styles.iconContainer}>
-                    <Ionicons name="location" size={20} color="#000000" />
-                  </View>
                   <View style={styles.textContent}>
                     <Text style={styles.modernPlaceName} numberOfLines={1}>
                       {place.name}
@@ -171,9 +208,17 @@ export function NearbyPlaces({ places, onPlacePress, currentLocation }: NearbyPl
                         {place.description}
                       </Text>
                     )}
-                    <Text style={styles.modernDistance}>
-                      {place.approximateDistance}
-                    </Text>
+                    <View style={styles.bottomRow}>
+                      <Text style={styles.modernDistance}>
+                        {place.approximateDistance}
+                      </Text>
+                      {place.rating && (
+                        <View style={styles.ratingContainer}>
+                          <Ionicons name="star" size={12} color="#FFC107" />
+                          <Text style={styles.ratingText}>{place.rating.toFixed(1)}</Text>
+                        </View>
+                      )}
+                    </View>
                   </View>
                 </View>
                 <View style={styles.arrowContainer}>
@@ -304,5 +349,53 @@ const styles = StyleSheet.create({
   },
   arrowContainer: {
     marginLeft: 8,
+  },
+
+  // Image Styles
+  imageContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  placeImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  imagePlaceholder: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  imageLoader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 8,
+  },
+
+  // Rating and bottom row
+  bottomRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
   },
 });

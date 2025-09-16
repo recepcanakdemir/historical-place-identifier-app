@@ -40,6 +40,52 @@ const createMapsUrl = (placeId, placeName, latitude, longitude) => {
   return `https://www.google.com/maps/place/?q=place_id:${placeId}`;
 };
 
+// Helper function to get place photos
+const getPlacePhotos = async (placeId) => {
+  try {
+    console.log('📸 Fetching photos for place ID:', placeId);
+    
+    if (!PLACES_CONFIG.API_KEY || !placeId) {
+      return null;
+    }
+
+    const url = `${PLACES_CONFIG.BASE_URL}/details/json?place_id=${placeId}&fields=photos&key=${PLACES_CONFIG.API_KEY}`;
+    
+    const response = await fetch(url, {
+      timeout: PLACES_CONFIG.TIMEOUT
+    });
+
+    if (!response.ok) {
+      throw new Error(`Places Details API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.status !== 'OK' || !data.result?.photos) {
+      console.log('📸 No photos found for place:', placeId);
+      return null;
+    }
+
+    const photos = data.result.photos.slice(0, 5); // Limit to 5 photos
+    const photoData = photos.map(photo => ({
+      photoReference: photo.photo_reference,
+      width: photo.width,
+      height: photo.height,
+      url: `${PLACES_CONFIG.BASE_URL}/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${PLACES_CONFIG.API_KEY}`
+    }));
+
+    console.log('✅ Found', photoData.length, 'photos for place');
+    return {
+      photos: photoData,
+      primaryPhotoUrl: photoData[0]?.url // First photo as primary
+    };
+
+  } catch (error) {
+    console.error('❌ Error fetching place photos:', error);
+    return null;
+  }
+};
+
 // Search for a place using Google Places Text Search API
 const searchPlace = async (placeName, location = null) => {
   try {
@@ -91,6 +137,9 @@ const searchPlace = async (placeName, location = null) => {
     const place = data.results[0]; // Get the first result
     console.log('✅ Found place:', place.name);
 
+    // Fetch photos for this place
+    const photoData = await getPlacePhotos(place.place_id);
+
     return {
       placeId: place.place_id,
       name: place.name,
@@ -98,7 +147,9 @@ const searchPlace = async (placeName, location = null) => {
       location: place.geometry?.location,
       mapsUrl: createMapsUrl(place.place_id, place.name, place.geometry?.location?.lat, place.geometry?.location?.lng),
       rating: place.rating,
-      types: place.types
+      types: place.types,
+      photoUrl: photoData?.primaryPhotoUrl,
+      photos: photoData?.photos
     };
 
   } catch (error) {
@@ -151,7 +202,10 @@ export const enrichNearbyPlaces = async (nearbyPlaces, currentLocation = null) =
             longitude: typeof (placeData.location?.lng) === 'number' ? placeData.location.lng : 
                       typeof place.longitude === 'number' ? place.longitude : parseFloat(place.longitude) || 0,
             address: placeData.address,
-            rating: placeData.rating
+            rating: placeData.rating,
+            photoUrl: placeData.photoUrl,
+            photos: placeData.photos,
+            isEnriched: true
           };
         } else {
           // Fallback to original data with coordinate-based URL
@@ -365,6 +419,8 @@ export const enrichNearbyPlacesWithPlaceId = async (nearbyPlaces, currentLocatio
         const placeData = await getPlaceIdFromName(placeName, city);
         
         if (placeData && placeData.placeId) {
+          // Fetch photos for this place
+          const photoData = await getPlacePhotos(placeData.placeId);
           // Use verified coordinates from Places API (more precise than AI coordinates)
           const placesApiLat = placeData.location?.lat;
           const placesApiLng = placeData.location?.lng;
@@ -391,6 +447,8 @@ export const enrichNearbyPlacesWithPlaceId = async (nearbyPlaces, currentLocatio
             longitude: finalLng,
             address: placeData.address,
             verifiedName: finalName,
+            photoUrl: photoData?.primaryPhotoUrl,
+            photos: photoData?.photos,
             isEnriched: true // Mark as enriched with Places API data
           };
         } else {
