@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
 import { checkSubscriptionStatus, restorePurchases } from '../services/subscriptionService';
 import { getUsageStats, resetUsage } from '../services/usageService';
+import { requestManualReview } from '../services/reviewService';
 import { Language, SubscriptionStatus, UsageStats } from '../types';
 
 export default function SettingsScreen() {
@@ -140,6 +141,40 @@ export default function SettingsScreen() {
         }
       ]
     );
+  };
+
+  const handleRateApp = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      const result = await requestManualReview();
+      
+      if (result.success) {
+        if (result.type === 'appstore') {
+          // App Store was opened, show thank you message
+          Alert.alert(
+            t.review?.title || 'Thank You!',
+            result.message || 'Thank you for rating our app!',
+            [{ text: t.ok }]
+          );
+        }
+        // For native reviews, no additional feedback needed
+      } else {
+        Alert.alert(
+          'Error',
+          result.message || 'Unable to open review. Please try again later.',
+          [{ text: t.ok }]
+        );
+      }
+    } catch (error) {
+      console.error('Error requesting manual review:', error);
+      Alert.alert(
+        'Error',
+        'Unable to open review. Please try again later.',
+        [{ text: t.ok }]
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getCurrentLanguageInfo = (): Language => {
@@ -304,6 +339,17 @@ export default function SettingsScreen() {
               {loading ? t.loading : t.restorePurchases}
             </Text>
             <Text style={styles.arrow}>↻</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.settingButton}
+            onPress={handleRateApp}
+            disabled={loading}
+          >
+            <Text style={styles.settingButtonText}>
+              {t.review?.rateNow || 'Rate Our App'}
+            </Text>
+            <Text style={styles.arrow}>⭐</Text>
           </TouchableOpacity>
 
           {/* <TouchableOpacity

@@ -300,6 +300,15 @@ export const tr = {
     refresh: 'Yenile',
   },
 
+  // Review Modal
+  review: {
+    title: 'LandmarkAI\'yi Beğeniyor musunuz?',
+    message: 'Yapay zeka ile tarihi yerleri keşfetmeyi seviyorsanız, lütfen bizi App Store\'da puanlamayı düşünün!',
+    rateNow: 'Şimdi Puanla',
+    later: 'Belki Sonra',
+    noThanks: 'Hayır Teşekkürler',
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'Keşfetmeye Başla',
   welcomeToPremium: 'Premium\'a hoş geldiniz! Artık tüm özelliklere sınırsız erişiminiz var.',

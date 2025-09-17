@@ -300,6 +300,15 @@ export const es = {
     refresh: 'Actualizar',
   },
 
+  // Review Modal
+  review: {
+    title: '¿Disfrutando LandmarkAI?',
+    message: 'Si te encanta descubrir lugares históricos con nuestra IA, ¡por favor considera calificarnos en el App Store!',
+    rateNow: 'Calificar Ahora',
+    later: 'Tal vez Después',
+    noThanks: 'No Gracias',
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'Comenzar a Explorar',
   welcomeToPremium: '¡Bienvenido a Premium! Ahora tienes acceso ilimitado a todas las funciones.',

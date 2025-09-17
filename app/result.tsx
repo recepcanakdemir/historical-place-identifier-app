@@ -24,8 +24,10 @@ import { enrichNearbyPlacesWithPlaceId } from '../services/placesService';
 import { PlaceInfo, UsageStats, NearbyPlace } from '../types';
 import { NearbyPlaces } from '../components/NearbyPlaces';
 import { ChatModal } from '../components/ChatModal';
+import { ReviewModal } from '../components/ReviewModal';
 import { openInMaps } from '../utils/mapUtils';
 import { isChatServiceAvailable } from '../services/chatService';
+import { shouldShowReviewPopup, trackAnalysisForReview, markReviewPopupShown, requestReview } from '../services/reviewService';
 import { useLanguage } from '../contexts/LanguageContext';
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -66,6 +68,9 @@ export default function ResultScreen() {
   
   // Chat modal state
   const [showChatModal, setShowChatModal] = useState(false);
+  
+  // Review modal state
+  const [showReviewModal, setShowReviewModal] = useState(false);
 
   useEffect(() => {
     if (fromSaved === 'true' && savedData) {
@@ -186,6 +191,28 @@ export default function ResultScreen() {
       // After successful analysis, use one analysis credit
       const analysisResult = await useAnalysis();
       console.log('Analysis used, remaining:', analysisResult.remainingAnalyses);
+      
+      // Track analysis for review popup
+      await trackAnalysisForReview();
+      
+      // Check if we should show review popup (with a small delay)
+      setTimeout(async () => {
+        try {
+          const shouldShow = await shouldShowReviewPopup();
+          if (shouldShow) {
+            await markReviewPopupShown();
+            
+            // Try enhanced review system (native first, then custom modal)
+            const reviewResult = await requestReview();
+            if (reviewResult.success && reviewResult.type === 'custom') {
+              // Only show custom modal if native review wasn't used
+              setShowReviewModal(true);
+            }
+          }
+        } catch (error) {
+          console.error('Error checking review popup:', error);
+        }
+      }, 2000); // Show popup 2 seconds after analysis completes
       
     } catch (error) {
       console.error('Error in limit check:', error);
@@ -705,6 +732,12 @@ export default function ResultScreen() {
           onClose={() => setShowChatModal(false)}
         />
       )}
+
+      {/* Review Modal */}
+      <ReviewModal
+        visible={showReviewModal}
+        onClose={() => setShowReviewModal(false)}
+      />
     </View>
   );
 }

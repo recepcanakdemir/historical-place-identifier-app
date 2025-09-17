@@ -300,6 +300,15 @@ export const en = {
     refresh: 'Refresh',
   },
 
+  // Review Modal
+  review: {
+    title: 'Enjoying LandmarkAI?',
+    message: 'If you love discovering historical places with our AI, please consider rating us on the App Store!',
+    rateNow: 'Rate Now',
+    later: 'Maybe Later',
+    noThanks: 'No Thanks',
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'Start Exploring',
   welcomeToPremium: 'Welcome to Premium! You now have unlimited access to all features.',

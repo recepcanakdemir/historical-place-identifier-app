@@ -71,6 +71,15 @@ export const ar = {
     },
   },
 
+  // Review Modal
+  review: {
+    title: 'هل تستمتع بـ LandmarkAI؟',
+    message: 'إذا كنت تحب اكتشاف الأماكن التاريخية بالذكاء الاصطناعي، يرجى التفكير في تقييمنا على متجر التطبيقات!',
+    rateNow: 'قيّم الآن',
+    later: 'ربما لاحقاً',
+    noThanks: 'لا شكراً',
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'ابدأ الاستكشاف',
   welcomeToPremium: 'مرحباً بك في البريميوم! لديك الآن وصول غير محدود لجميع الميزات.',

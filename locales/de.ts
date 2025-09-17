@@ -71,6 +71,15 @@ export const de = {
     },
   },
 
+  // Review Modal
+  review: {
+    title: 'Gefällt Ihnen LandmarkAI?',
+    message: 'Wenn Sie es lieben, historische Orte mit unserer KI zu entdecken, bewerten Sie uns bitte im App Store!',
+    rateNow: 'Jetzt Bewerten',
+    later: 'Vielleicht Später',
+    noThanks: 'Nein Danke',
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'Erkunden Beginnen',
   welcomeToPremium: 'Willkommen bei Premium! Sie haben jetzt unbegrenzten Zugang zu allen Funktionen.',

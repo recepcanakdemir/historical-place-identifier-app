@@ -71,6 +71,15 @@ export const ja = {
     },
   },
 
+  // Review Modal
+  review: {
+    title: 'LandmarkAIを楽しんでいますか？',
+    message: 'AIで歴史的な場所を発見することを愛しているなら、App Storeで評価することを検討してください！',
+    rateNow: '今すぐ評価',
+    later: '後で',
+    noThanks: '結構です',
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: '探索を開始',
   welcomeToPremium: 'プレミアムへようこそ！すべての機能に無制限でアクセスできます。',

@@ -71,6 +71,15 @@ export const zh = {
     },
   },
 
+  // Review Modal
+  review: {
+    title: '喜欢LandmarkAI吗？',
+    message: '如果您喜欢用我们的AI发现历史地点，请考虑在App Store给我们评分！',
+    rateNow: '立即评分',
+    later: '稍后再说',
+    noThanks: '不用了',
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: '开始探索',
   welcomeToPremium: '欢迎使用高级版！您现在可以无限制地使用所有功能。',

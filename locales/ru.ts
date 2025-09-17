@@ -71,6 +71,15 @@ export const ru = {
     },
   },
 
+  // Review Modal
+  review: {
+    title: 'Нравится LandmarkAI?',
+    message: 'Если вам нравится открывать исторические места с помощью нашего ИИ, пожалуйста, оцените нас в App Store!',
+    rateNow: 'Оценить Сейчас',
+    later: 'Может Позже',
+    noThanks: 'Нет Спасибо',
+  },
+
   // Legacy flat keys for backward compatibility
   startExploringButton: 'Начать Исследование',
   welcomeToPremium: 'Добро пожаловать в Premium! Теперь у вас есть неограниченный доступ ко всем функциям.',
